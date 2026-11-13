@@ -125,7 +125,7 @@ function gunCard(id, tierBack) {
     <div class="gmain"><div class="gtop"><div class="gtl"><span class="nm">${esc(g.name.replace(/ “.*”/, ''))}</span><div class="gsub"><span class="ttag">${esc(g.cls === 'Marksman Rifle' ? 'Marksman' : g.cls)}</span><span class="rtag" style="background:${RAR[g.tier]}">${RARN[g.tier]}</span></div></div><span class="costb">${ic('intel', RES.intel)}${g.intel_cost}</span></div>
       <div class="gart">${art ? `<img src="${art}" alt="">` : ''}</div>
       <div class="gbot"><div class="gstats">${stats.map(([v, i, l, on]) => `<div><b${onText(on)}>${v}</b><span>${ic(i)}${l}</span></div>`).join('')}</div>
-      ${g.rookie ? `<div class="gcombo rk"><span><b>Rounds 1–${T.rookieRounds}:</b> ${g.rookie[0]} ${ic('hm')} hits for ${g.rookie[1]} (cover and range don't count)</span></div>` : g.gcombo ? `<div class="gcombo">${roleB(g.gcombo.role, true)}<span>${fx(g.gcombo.text)}</span></div>` : `<div class="gcombo none">Reveal 1 card per ${ic('prec', RES.prec)}, up to ${T.aimCap}</div>`}</div>
+      ${g.rookie ? `<div class="gcombo rk"><span><b>Rounds 1–${T.rookieRounds}:</b> ${g.rookie[0]} ${ic('hm')} hits for ${g.rookie[1]} (no cover or range)</span></div>` : g.gcombo ? `<div class="gcombo">${roleB(g.gcombo.role, true)}<span>${fx(g.gcombo.text)}</span></div>` : `<div class="gcombo none"><span>Reveal 1 card per ${ic('prec', RES.prec)}, up to ${T.aimCap}</span></div>`}</div>
     </div></div>`;
 }
 function gunBack(label, sub, bg, dark) { return `<div class="card gunL gback" style="--gb:${bg};color:${dark ? '#1C2017' : '#fff'}"><div class="bk"><div class="bl">${label}</div><div class="bs">${sub}</div></div></div>`; }
@@ -371,7 +371,7 @@ svg.rank.inl { display: inline-block; width: 13px; height: auto; vertical-align:
 .gbot { display: flex; gap: 5px; align-items: stretch; }
 .gstats { display: flex; gap: 3px; } .gstats div { background: #EFF0E8; border-radius: 4px; text-align: center; padding: 1px 3px; min-width: 0.36in; }
 .gstats b { display: block; font-size: 11.5pt; line-height: 1.1; } .gstats span { font-size: 6pt; color: #5B6152; letter-spacing: .03em; text-transform: uppercase; } .gstats svg.i { width: 8px; height: 8px; }
-.gcombo { flex: 1; display: flex; align-items: center; gap: 3px; border: 1.4px solid #1C2017; border-radius: 6px; padding: 2px 5px; font-size: 8.5pt; font-weight: 600; line-height: 1.25; white-space: nowrap; } .gcombo.none { border-style: dashed; color: #8A8F80; font-weight: 500; } .gcombo svg.i { width: 1.05em; height: 1.05em; vertical-align: -0.2em; }
+.gcombo { flex: 1; min-width: 0; display: flex; align-items: center; gap: 3px; border: 1.4px solid #1C2017; border-radius: 6px; padding: 2px 5px; font-size: 7.5pt; font-weight: 600; line-height: 1.15; white-space: normal; overflow: hidden; } .gcombo > span { min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; } .gcombo.none { border-style: dashed; color: #8A8F80; font-weight: 500; } .gcombo svg.i { width: 1.05em; height: 1.05em; vertical-align: -0.2em; }
 .gback { background: var(--gb); align-items: center; justify-content: center; } .gback .bk { color: inherit !important; border-color: currentColor !important; } .gback .bk { text-align: center; } .gback .bl { font-weight: 900; font-size: 20pt; letter-spacing: .12em; } .gback .bs { font-size: 10pt; margin-top: 4px; opacity: .85; }
 .sheet.gun8 { grid-template-columns: repeat(2, 3.5in); grid-template-rows: repeat(4, 2.5in); width: 7in; }
 /* gun */

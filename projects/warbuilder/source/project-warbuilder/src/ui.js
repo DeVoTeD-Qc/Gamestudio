@@ -118,6 +118,11 @@ function render() {
   flipPlay(snap);
   const lo2 = app.querySelector('.logbox ol'); if (lo2) lo2.scrollTop = ls;
   const f = app.querySelector('.field');
+  if (f) { // wb-r2: a strip wider than the screen scrolls from its first location (never centred past the left edge)
+    const kids = f.children; const fr = f.getBoundingClientRect(); const a = kids[0] && kids[0].getBoundingClientRect(), z = kids[kids.length - 1] && kids[kids.length - 1].getBoundingClientRect();
+    const ov = !!(a && z) && (z.right - a.left > fr.width + 2 || f.classList.contains('ovf') && f.scrollWidth > f.clientWidth + 2);
+    f.classList.toggle('ovf', ov);
+  }
   if (f && f.scrollWidth > f.clientWidth + 4 && getComputedStyle(f).overflowX !== 'clip') {
     const target = ui.play ? 'rv' + op.pos : 'me' + me.pos;
     const here = f.querySelector(ui.play ? '.env.rival' : '.env.here');
@@ -243,7 +248,7 @@ function cardSheet(S) {
 const SCENERY = `<div class="scenery" aria-hidden="true"><svg viewBox="0 0 1600 420" preserveAspectRatio="xMidYMax slice">
   <defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#151a14"/><stop offset=".55" stop-color="#2b2c1f"/><stop offset=".82" stop-color="#5a4626"/><stop offset="1" stop-color="#2a2417"/></linearGradient>
   <radialGradient id="sunG" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#f2b25a" stop-opacity=".55"/><stop offset="1" stop-color="#f2b25a" stop-opacity="0"/></radialGradient>
-  <filter id="blurS"><feGaussianBlur stdDeviation="14"/></filter></defs>
+  <radialGradient id="smokeG" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#8f8a74" stop-opacity=".9"/><stop offset=".6" stop-color="#8f8a74" stop-opacity=".35"/><stop offset="1" stop-color="#8f8a74" stop-opacity="0"/></radialGradient></defs>
   <rect width="1600" height="420" fill="url(#skyG)"/>
   <circle cx="420" cy="300" r="190" fill="url(#sunG)"/>
   <path d="M0 300 L120 262 L230 285 L360 238 L470 270 L600 230 L720 268 L860 242 L1000 276 L1120 236 L1260 270 L1400 246 L1600 282 L1600 420 L0 420Z" fill="#3a3524" opacity=".7"/>
@@ -255,7 +260,7 @@ const SCENERY = `<div class="scenery" aria-hidden="true"><svg viewBox="0 0 1600 
   </g>
   <g stroke="#262618" stroke-width="5" fill="none" opacity=".95"><path d="M830 340 V180 M830 186 H930 M830 210 L900 186 M920 186 V226"/><path d="M1250 340 L1270 170 L1290 340 M1258 260 H1282 M1263 220 H1278"/></g>
   <path d="M0 360 C200 340 320 372 520 356 S880 340 1040 360 S1400 346 1600 362 V420 H0Z" fill="#1a1c13"/>
-  <g class="sc-smoke" fill="#8f8a74" filter="url(#blurS)"><ellipse class="sm1" cx="300" cy="250" rx="40" ry="70"/><ellipse class="sm2" cx="1180" cy="240" rx="46" ry="80"/><ellipse class="sm3" cx="690" cy="270" rx="30" ry="56"/></g>
+  <g class="sc-smoke" fill="url(#smokeG)"><ellipse class="sm1" cx="300" cy="250" rx="40" ry="70"/><ellipse class="sm2" cx="1180" cy="240" rx="46" ry="80"/><ellipse class="sm3" cx="690" cy="270" rx="30" ry="56"/></g>
   <g class="sc-heli" fill="#141610"><path d="M0 0 h34 l10 6 h-44 z M8 6 h28 v4 h-28z M44 6 h22 v2 h-22z M4 -4 h60 v1.5 h-60z"/></g>
   <g fill="#f2b25a" opacity=".7"><circle class="sc-fire f1" cx="612" cy="318" r="3"/><circle class="sc-fire f2" cx="1104" cy="322" r="2.5"/><circle class="sc-fire f3" cx="176" cy="320" r="2"/></g>
 </svg></div>`;
@@ -301,7 +306,7 @@ function flipPlay(m) {
   for (const k in m.ghost) { if (now.has(k)) continue; const r = m.rect[k]; const g = m.ghost[k];
     Object.assign(g.style, { position: 'fixed', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', margin: 0, zIndex: 5, pointerEvents: 'none', maxWidth: 'none', flex: 'none' });
     g.classList.add('ghost-out'); (app.querySelector('.h-map') || document.body).appendChild(g);
-    g.animate([{ opacity: 1, translate: '0px 0px', filter: 'none' }, { opacity: 0, translate: '80px 0px', filter: 'blur(4px) sepia(1) hue-rotate(30deg) saturate(3)' }], { duration: 700, easing: 'ease-in' }).onfinish = () => g.remove(); }
+    g.animate([{ opacity: 1, translate: '0px 0px', filter: 'none' }, { opacity: 0, translate: '80px 0px', filter: 'none' }], { duration: 700, easing: 'ease-in' }).onfinish = () => g.remove(); }
   app.querySelectorAll('[data-num]').forEach(el => { const k = el.dataset.num, txt = el.textContent.trim(), to = +txt, from = m.num[k]; if (from == null || from === to || isNaN(from) || !/^-?\d+$/.test(txt)) return; // wb-first-shot: only whole numbers count up (Threat '–' / '2.4' made 'NaN')
     const t0 = performance.now(), d = 450; el.textContent = from; const step = t => { const p = Math.min(1, (t - t0) / d); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))); if (p < 1 && el.isConnected) requestAnimationFrame(step); }; requestAnimationFrame(step); });
   app.querySelectorAll('[data-bar] i').forEach(el => { const w = m.bar[el.parentNode.dataset.bar]; if (!w || w === el.style.width) return; const to = el.style.width; el.style.transition = 'none'; el.style.width = w; void el.offsetWidth; el.style.transition = ''; el.style.width = to; });
@@ -322,7 +327,9 @@ function hudHTML(me, op) {
 }
 function hpBar(pl, side) {
   const pct = Math.max(0, pl.hp) / HPMAX() * 100; ui.prevHp = ui.prevHp || {}; const hit = ui.prevHp[side] != null && pl.hp < ui.prevHp[side]; ui.prevHp[side] = pl.hp;
-  return `<span data-bar="${side}" class="hb ${side} ${pl.hp <= 9 ? 'low' : ''} ${hit ? 'hit' : ''}" role="img" aria-label="${escA(pl.name)} health ${Math.max(0, pl.hp)} of ${HPMAX()}"><i style="width:${pct}%"></i></span>`;
+  const F = side === 'me' && ui.hpFx; const el = F ? (performance.now() - F.t) / 1000 : 9;
+  const drain = F && el < 2.2 && F.from > F.to ? `<b class="hb-drain" style="left:${F.to / HPMAX() * 100}%;width:${(F.from - F.to) / HPMAX() * 100}%;animation-delay:${(0.45 - el).toFixed(2)}s"></b>` : '';
+  return `<span data-bar="${side}" class="hb ${side} ${pl.hp <= 9 ? 'low' : ''} ${hit ? 'hit' : ''}" role="img" aria-label="${escA(pl.name)} health ${Math.max(0, pl.hp)} of ${HPMAX()}"><i style="width:${pct}%"></i>${drain}</span>`;
 }
 function perkMini(pi) {
   const pl = G.players[pi]; const own = pl.perks || [];
@@ -432,6 +439,7 @@ function deckBar(pi) {
 // The tactical strip: the new verbs in play (yours and your rival's). Every chip explains itself on hold, right click or hover.
 function tacStrip(me) {
   const op = OP(); const t = myTurn(); const out = [];
+  if (t && !G.spoils) out.push(`<span class="rt-slot">${rtChip()}</span>`);
   const chip = (cls, txt, tip, act) => out.push(act ? `<button class="tchip ${cls}" data-act="${act}" data-tip="${escA(tip)}">${txt}</button>` : `<span class="tchip ${cls}" data-tip="${escA(tip)}">${txt}</span>`);
   if (op.ow) { const b = WD.eff(G, op.guns[0]).band; chip('warn', `⚠ Rival holds an angle ${op.ow.prec}`, `${op.name} holds an angle with ${op.ow.prec} Precision: end your turn at distance ${b[0]}–${b[1]} and their gun fires once. You are at distance ${WD.dist(G)}.`); }
   if (me.ow && !t) chip('me', `Angle held ${me.ow.prec}`, `You hold an angle with ${me.ow.prec} Precision: if ${op.name} ends this turn in range, you fire.`);
@@ -538,14 +546,13 @@ function hudBtns(me) {
   const same = me.pos === OP().pos; const canPunch = WD.TUNE.punch && t && same && !me.punched && !ok;
   const pc = WD.plateCost(G, ui.me);
   const fireBtn = canPunch ? `<button class="hb-fire" data-act="dofists" data-tip="No gun can fire: punch your rival for 1 damage.">PUNCH · 1</button>`
-    : `<button class="hb-fire ${t && ok && fo.pct >= 40 ? 'ready' : ''} ${t && ok && fo.pct < 10 ? 'long' : ''}" data-act="fire" data-id="${gi}" ${t && ok ? '' : 'disabled'} data-tip="${escA(ok ? (fo.sp.melee ? `Stab with the ${wnm(wdef(me.guns[gi]))}: always hits.` : `${fo.pct >= 1 ? fo.pct + '%' : 'Under 1%'} to hit with the ${wnm(wdef(me.guns[gi]))}: reveal ${fo.sp.reveal} card${fo.sp.reveal === 1 ? '' : 's'}${fo.sp.power ? ` (Power +${fo.sp.powerDmg} damage)` : ''}. ${oddsWhy(fo.sp)} Costs ${fo.sp.cost} Precision (aim ${fo.commit} + Recoil ${fo.sp.recoil}). Aim changes it.`) : fo && fo.err ? fo.err : 'Pick a gun that can fire.')}"><span class="hb-l">FIRE${ok ? ` <b class="hb-pct">${fo.pct >= 1 ? fo.pct + '%' : '&lt;1%'}</b>` : ''}</span>${ok ? (fo.sp.melee ? '<small class="hb-why">always hits</small>' : `<small class="hb-why">${fo.sp.reveal} card${fo.sp.reveal === 1 ? '' : 's'} · −${fo.sp.cost} Prec</small>`) : t && fo && fo.err ? `<small class="hb-why">${escA(shortErr(fo.err))}</small>` : ''}</button>${t && ok && !fo.sp.melee ? `<button class="hb-aim" data-act="aim" data-id="${gi}" data-tip="Aim: choose how much Precision this shot uses. More cards = better odds, less Precision for the next shot.">Aim <b>${fo.commit}</b>${fo.commit === suggested(gi).commit ? '<i>★</i>' : ''}</button>` : ''}`;
+    : `<button class="hb-fire ${t && ok && fo.pct >= 40 ? 'ready' : ''} ${t && ok && fo.pct < 10 ? 'long' : ''}" data-act="fire" data-id="${gi}" ${t && ok ? '' : 'disabled'} data-tip="${escA(ok ? (fo.sp.melee ? `Stab with the ${wnm(wdef(me.guns[gi]))}: always hits.` : `${fo.pct >= 1 ? fo.pct + '%' : 'Under 1%'} to hit with the ${wnm(wdef(me.guns[gi]))}: reveal ${fo.sp.reveal} card${fo.sp.reveal === 1 ? '' : 's'}${fo.sp.power ? ` (Power +${fo.sp.powerDmg} damage)` : ''}. ${oddsWhy(fo.sp)} Costs ${fo.sp.cost} Precision (aim ${fo.commit} + Recoil ${fo.sp.recoil}). Aim changes it.`) : fo && fo.err ? fo.err : 'Pick a gun that can fire.')}"><span class="hb-l">FIRE${ok ? ` <b class="hb-pct">${fo.pct >= 1 ? fo.pct + '%' : '&lt;1%'}</b>` : ''}</span>${ok ? (fo.sp.melee ? '<small class="hb-why">always hits</small>' : `<small class="hb-why hb-req">${reqLine(fo.sp)} <span class="hb-cards">· ${fo.sp.reveal} card${fo.sp.reveal === 1 ? '' : 's'}</span></small>`) : t && fo && fo.err ? `<small class="hb-why">${escA(shortErr(fo.err))}</small>` : ''}</button>${t && ok && !fo.sp.melee ? `<button class="hb-aim" data-act="aim" data-id="${gi}" data-tip="Aim: choose how much Precision this shot uses. More cards = better odds, less Precision for the next shot.">Aim <b>${fo.commit}</b>${fo.commit === suggested(gi).commit ? '<i>★</i>' : ''}</button>` : `<button class="hb-aim" disabled data-tip="Aim: choose how much Precision a shot uses. Needs a gun that can fire.">Aim <b>–</b></button>`}`;
   return `${fireBtn}
-    <button class="hb-bs" data-act="sheet" data-id="station" ${t ? '' : 'disabled'} data-tip="${escA(`Buy Station: a squad basic for ${pc} Intel (uses a buy). ${WD.TUNE.stationScrapCost ? `${WD.TUNE.stationScrapCost} Intel` : 'Free'}: scrap a Sprint, once a turn.`)}">${ic('para')} Buy Station <small>${ic('intel')}${pc} · ${t ? WD.buysLeft(G, ui.me) : WD.TUNE.buyCap} buys</small></button>
+    <button class="hb-bs" data-act="sheet" data-id="station" ${t ? '' : 'disabled'} data-tip="${escA(`Buy Station: a squad basic for ${pc} Intel (uses a buy). ${WD.TUNE.stationScrapCost ? `${WD.TUNE.stationScrapCost} Intel` : 'Free'}: scrap a Sprint, once a turn.`)}">${ic('para')} <span class="bs-l">Buy Station</span> <small>${ic('intel')}${pc} · ${t ? WD.buysLeft(G, ui.me) : WD.TUNE.buyCap} buys</small></button>
     <button class="hb-move ${ui.moveMode ? 'on' : ''}" data-act="move" ${t && (ui.moveMode || ((!me.moved || WD.TUNE.multiMove) && me.res.move > 0 && WD.reachable(G, ui.me).length)) ? '' : 'disabled'} data-tip="Move once a turn: tap, then tap a lit location. 1 Movement per location.">${ic('move')} ${ui.moveMode ? 'Cancel move' : me.moved && !WD.TUNE.multiMove ? 'Moved' : `Move <small>${me.res.move}</small>`}</button>
-    ${t && me.scrapAvail ? `<button class="hb-scrap" data-act="scrapsheet" data-tip="${escA(KW.Scrap)}">${ic('scrap')} Scrap ${me.scrapAvail}</button>` : ''}
     <button class="hb-all" data-act="playall" ${t && me.hand.some(i => !WD.cardDef(G, i).jam) ? '' : 'disabled'} data-tip="Play every card in your hand.">Play all</button>
     ${t && WD.canBench(G, ui.me) && me.hand.length ? `<button class="hb-burn ${ui.burnMode ? 'on' : ''}" data-act="burnmode" data-tip="Workbench: once per turn, remove a card from your hand from the game. Free.">${ui.burnMode ? 'Tap a card to burn · cancel' : 'Burn 1 (Workbench)'}</button>` : ''}
-    <button class="hb-end" data-act="endturn" ${t ? '' : 'disabled'} data-tip="End turn: unused Intel is lost, unused Movement becomes Armor. Discard hand and played cards (Loadout stays), draw 5.">End turn${t && WD.TUNE.digIn && me.res.move > 0 ? `<small class="dig">+${Math.min(WD.TUNE.digIn, me.res.move)}${ic('def')}</small>` : ''}</button>
+    ${G.over ? `<button class="hb-end hb-over" data-act="sheet" data-id="over" data-tip="The match is over: see the result, your XP and rank.">Result &amp; XP</button>` : (() => { const arm = t && ui.endArm && ui.endArm.k === G.turnNo && ui.endArm.until > Date.now(); return `<button class="hb-end ${arm ? 'armed' : ''}" data-act="endturn" ${t ? '' : 'disabled'} data-tip="${escA(arm ? `Tap again to end your turn. Still unused: ${ui.endArm.why}.` : `End turn: unused Intel is lost, unused Movement becomes Armor. Discard hand and played cards (Loadout stays), draw 5. Deck ${me.deck.length} · Discard ${me.discard.length}.`)}">${arm ? `<span class="hb-l">End turn?</span><small class="hb-why">${escA(ui.endArm.why)} · tap again</small>` : `End turn${t && WD.TUNE.digIn && me.res.move > 0 ? `<small class="dig">+${Math.min(WD.TUNE.digIn, me.res.move)}${ic('def')}</small>` : ''}`}</button>`; })()}
     <span class="hb-deck" data-tip="Cards left in your deck and in your discard pile. An empty deck reshuffles the discard pile.">Deck <b>${me.deck.length}</b> · <span class="dcount">Discard <b>${me.discard.length}</b></span></span>`;
 }
 const RAR_N = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
@@ -660,6 +667,7 @@ function overSheet() {
         <span data-tip="Hits / shots fired.">Hits <b>${me.stats.hits}/${me.stats.shots}</b></span>
         <span data-tip="Cards you gained: loot, Buy Station, Spoils, Promotion.">Added <b>${me.stats.added.length}</b><small>Spoils ${me.stats.spoils} · promoted ${me.stats.promoted}</small></span>
       </div>
+      ${ui.rivalRep && (ui.rivalRep.shots.length || ui.rivalRep.lost > 0) ? `<div class="aa-box aa-last"><h3>${escA(op.name)}’s last turn${ui.rivalRep.lost > 0 ? ` <small>−${ui.rivalRep.lost} Health (${Math.max(0, ui.rivalRep.hpStart)} → ${Math.max(0, ui.rivalRep.hpEnd)})</small>` : ''}</h3><p class="rr-line">${repText(ui.rivalRep, true)}</p>${repChips(ui.rivalRep)}</div>` : ''}
       ${mvp ? `<div class="aa-mvp" data-prev="cd:${mvp[0]}"><span class="lbl">MVP card</span>${hasFace('card_' + mvp[0]) ? `<span class="mf">${pf('card_' + mvp[0])}</span>` : ''}<span><b>${escA(WD.CARDS[mvp[0]].name)}</b><small>${mvp[1]} Hit Markers in your hits</small></span></div>` : ''}
       ${added.length ? `<div class="aa-add"><span class="lbl">Cards you added${me.stats.added.length > 12 ? ' (last 12)' : ''}</span><div class="aa-row">${added.map(id => hasFace('card_' + id) ? `<span class="mf" data-prev="cd:${id}">${pf('card_' + id)}</span>` : `<span class="sc-chip">${escA(WD.CARDS[id].name)}</span>`).join('')}</div></div>` : ''}
       ${M ? `<div class="aa-xp"><span class="lbl">Operator XP +${M.gained.total}</span><span class="aa-parts">${M.gained.parts.map(([l, n]) => `<span>${escA(l)} <b>+${n}</b></span>`).join('')}</span>${rankBadge(ui.prof)}${M.after.i > M.before.i ? `<p class="aa-up">Promoted to <b>${M.after.name}</b>!</p>` : ''}${M.newUnlocks.map(u => `<p class="aa-unl" data-tip="${escA(u.text)}">Unlocked: <b>${escA(u.name)}</b> · ${escA(u.text)}</p>`).join('')}${M.saved ? '' : '<p class="ld-p">Storage is blocked here: this rank lasts until you close the page.</p>'}</div>` : `<p class="ld-p">Rank XP comes from matches vs the AI.</p>`}
@@ -734,7 +742,7 @@ function oddsWhy(sp) {
 // the one next step, in a few words; after the rival's turn it first says what they did (wb-ux-text)
 function nextHint() {
   const me = ME();
-  if (G.over) return 'Match over.';
+  if (G.over) return `Match over. <button class="hint-res" data-act="sheet" data-id="over">See the result</button>`;
   if (!myTurn()) return ui.mode === 'ai' ? `<b>${OP().name}</b> is playing…` : 'Waiting…';
   const pre = ui.rivalSum ? `<span class="hint-last">${ui.rivalSum}</span> ` : '';
   return pre + nextStep(me);
@@ -766,6 +774,101 @@ function rivalSummary(frames, hp0, pos0) {
   const sh = n(/ fires /); if (sh) parts.push(`fired ${sh}×`);
   const lost = hp0 - me.hp;
   return `<b>${escA(nm)}</b> ${parts.join(', ') || 'passed'}${lost > 0 ? `: <b class="hl-dmg">you took ${lost}</b>` : lost < 0 ? `: you healed ${-lost}` : ''}.`;
+}
+// wb-r2 (playtest round 2): what the rival's turn(s) did to you, shot by shot. ui.rr spans every rival turn between two of
+// yours (the rival can act twice in a row across a round change), plus what hit you at your own End turn (gas, a held angle).
+function rrStart() {
+  if (ui.rr) return; const me = ME(); const R = { hpStart: ui.hpEnd != null ? ui.hpEnd : me.hp, def: me.def, shots: [], other: [], healed: 0, turns: 0 };
+  const gap = R.hpStart - me.hp; const r = 1 - ui.me;
+  if (gap > 0) { // between your End turn tap and the rival's first card: their held angle, or the gas / storm at round end
+    const i0 = ui.logRefEnd ? G.log.indexOf(ui.logRefEnd) : -1; const L = i0 >= 0 ? G.log.slice(i0 + 1) : []; let left = gap;
+    for (const e of L) { const m = e.msg.match(/^(.+?) held angle fires: .*HIT for (\d+)/); if (m && m[1] === `${G.players[r].name}'s`) { const d = Math.min(left, +m[2]); R.shots.push({ w: 'Held angle', hit: true, d, notes: [] }); left -= d; } }
+    if (left > 0) R.other.push({ what: L.some(e => /storm/i.test(e.msg)) ? 'Storm' : 'Gas', d: left });
+  }
+  ui.rr = R;
+}
+function rrAdd(frames, hp0) {
+  const R = ui.rr; if (!R) return; const r = 1 - ui.me; let prev = hp0; R.turns++;
+  for (const f of frames) {
+    let st; try { st = JSON.parse(f.state); } catch (e) { continue; }
+    const hp = st.players[ui.me].hp; const d = prev - hp; prev = hp; const lf = st.lastFire;
+    if (lf && lf.p === r && (f.cls === 'hit' || f.cls === 'miss') && / fires[ :]| punches /.test(f.msg)) R.shots.push({ w: lf.kind === 'overwatch' ? 'Held angle' : lf.kind === 'turret' ? lf.weapon : lf.weapon, hit: lf.hit, d: Math.max(0, d), notes: lf.notes || [] });
+    else if (d > 0) R.other.push({ what: f.cls === 'gas' ? (/storm/i.test(f.msg) ? 'Storm' : 'Gas') : f.msg.replace(/\.$/, '').slice(0, 48), d });
+    else if (d < 0) R.healed -= d;
+  }
+}
+function rrDone() {
+  const R = ui.rr; if (!R) return; ui.rr = null; ui.hpEnd = null; ui.logRefEnd = null;
+  R.hpEnd = ME().hp; R.lost = R.hpStart - R.hpEnd; ui.rivalRep = R; ui.repOpen = R.shots.length > 0 || R.lost > 0;
+  if (R.lost > 0) ui.hpFx = { from: Math.max(0, R.hpStart), to: Math.max(0, R.hpEnd), t: performance.now() };
+}
+// "Rival fired 4× with Viper: 3 hits, 41 damage (you had 0 Armor). Gas 2."
+function repText(R, html) {
+  const B = t => html ? `<b>${t}</b>` : t; const nm = escA(OP().name); const by = {};
+  for (const x of R.shots) { const o = by[x.w] = by[x.w] || { n: 0, hits: 0, d: 0 }; o.n++; if (x.hit) o.hits++; o.d += x.d; }
+  const notes = R.shots.flatMap(x => x.notes); const sum = re => notes.reduce((a, n) => { const m = n.match(re); return a + (m ? +m[1] : 0); }, 0);
+  const arm = sum(/^Armor −(\d+)/), rx = sum(/reaction −(\d+)/); const cq = notes.some(n => /close quarters/.test(n));
+  const fired = Object.entries(by).map(([w, o]) => w === 'Held angle' ? `held an angle: ${o.hits ? `hit for ${o.d}` : 'missed'}` : `fired ${o.n}× with ${escA(w)}: ${o.hits ? `${o.hits === o.n ? (o.n > 1 ? 'all hit' : 'hit') : `${o.hits} hit${o.hits > 1 ? 's' : ''}`}, ${B(`${o.d} damage`)}` : 'all missed'}`);
+  const hits = R.shots.some(x => x.hit);
+  const arTxt = !hits ? '' : cq ? ' (close quarters: Armor ignored)' : arm ? ` (your Armor blocked ${arm})` : R.def ? '' : ' (you had 0 Armor)';
+  const rxTxt = hits && rx ? ` Reaction cards saved ${rx}.` : '';
+  const oth = R.other.map(o => `${escA(o.what)} ${B(o.d)}`).join(', ');
+  const main = fired.length ? `${B(nm)} ${fired.join('; ')}${arTxt}.` : `${B(nm)} did not fire.`;
+  return `${main}${rxTxt}${oth ? ` ${oth}.` : ''}${R.healed ? ` You healed ${R.healed}.` : ''}`;
+}
+function repChips(R) {
+  const c = R.shots.map(x => `<span class="rr-c ${x.hit ? 'hit' : 'miss'}" data-tip="${escA(`${x.w}: ${x.hit ? `hit for ${x.d}` : 'miss'}${x.notes.length ? ` (${x.notes.join(', ')})` : ''}.`)}">${escA(x.w === 'Held angle' ? 'Angle' : x.w.replace(/ “.*”/, ''))} <b>${x.hit ? '−' + x.d : 'MISS'}</b></span>`)
+    .concat(R.other.map(o => `<span class="rr-c gas">${escA(o.what)} <b>−${o.d}</b></span>`));
+  return c.length ? `<div class="rr-chips">${c.join('')}</div>` : '';
+}
+function repPanel() {
+  const R = ui.rivalRep; if (!R || !ui.repOpen || !G || G.over || !myTurn() || ui.sheet) return '';
+  const pct = v => Math.max(0, Math.min(100, v / HPMAX() * 100)); const a = Math.max(0, R.hpStart), b = Math.max(0, R.hpEnd);
+  const el = ui.hpFx ? (performance.now() - ui.hpFx.t) / 1000 : 9;
+  return `<div class="rrep ${R.lost > 0 ? 'hurt' : ''}" role="status" aria-live="polite"><div class="rr-head"><b>${R.turns > 1 ? `${escA(OP().name)}’s ${R.turns} turns` : `${escA(OP().name)}’s turn`}</b><span class="rr-tot">${R.lost > 0 ? `−${R.lost} Health` : R.lost < 0 ? `+${-R.lost} Health` : 'no damage'}</span><button class="rr-x" data-act="rrepx" aria-label="Close the rival report">✕</button></div>
+    ${R.lost > 0 ? `<div class="rr-hp"><span class="rr-bar"><i class="now" style="width:${pct(b)}%"></i><i class="lost" style="left:${pct(b)}%;width:${pct(a) - pct(b)}%;animation-delay:${(0.45 - el).toFixed(2)}s"></i></span><span class="rr-num">${a} → <b>${b}</b></span></div>` : ''}
+    <p class="rr-line">${repText(R, true)}</p>${repChips(R)}</div>`;
+}
+// wb-r2: the rival's damage before your next turn, as numbers. Simulated from where you stand now: your End turn as it would be
+// (unused Movement → Armor), then the AI's turn(s), 16 times with the rival's cards reshuffled (their hand stays hidden).
+function simRival() {
+  const me = ui.me, r = 1 - me, N = 16, out = []; let meFirst = false, turns = 1;
+  let seed = (G.seed ^ Math.imul(G.turnNo, 7919)) >>> 0 || 1; const rnd = () => { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return (seed >>> 8) / 16777216; };
+  const base = JSON.stringify(Object.assign({}, G, { log: [], _rec: null }));
+  for (let k = 0; k < N; k++) {
+    const c = JSON.parse(base); c.seed = (rnd() * 2147483647) | 0;
+    const rp = c.players[r]; const h = rp.hand.length; const pool = rp.hand.concat(rp.deck);
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    rp.hand = pool.slice(0, h); rp.deck = pool.slice(h); const d0 = rp.stats.damageDealt;
+    const endMine = () => { WD.endTurn(c, me); if (c.spoils && c.spoils.p === me) WD.takeSpoils(c, me, null); };
+    try { endMine(); if (!c.over && c.turn === me) { meFirst = true; endMine(); } let g = 0; while (!c.over && c.turn === r && g < 3) { WD.aiTurn(c, r); g++; } turns = Math.max(turns, g); } catch (e) { continue; }
+    out.push(c.players[r].stats.damageDealt - d0);
+  }
+  if (!out.length) return null;
+  const hp = ME().hp; return { ev: Math.round(out.reduce((a, b) => a + b, 0) / out.length), max: Math.max(...out), ko: out.filter(x => x >= hp).length / out.length, meFirst, turns, n: out.length };
+}
+function rtKey() { const me = ME(), op = OP(); return [G.turnNo, me.pos, op.pos, me.def, me.res.move, me.hp, op.hp, me.hand.length, me.play.length, me.res.prec, me.res.intel, G.round].join(':'); }
+function rivalOutlook() {
+  if (!G || G.over || !myTurn() || G.spoils || ui.play) return null;
+  const k = rtKey(); if (ui.rtK === k) return ui.rt;
+  if (ui.rtPend !== k) { ui.rtPend = k; clearTimeout(ui.rtT); ui.rtT = setTimeout(() => { if (!G || ui.rtPend !== k || !myTurn() || rtKey() !== k) return; let v = null; try { v = simRival(); } catch (e) { v = null; } ui.rt = v; ui.rtK = k; ui.rtPend = null; document.querySelectorAll('.rt-slot').forEach(el => { el.innerHTML = rtChip(); }); }, 120); }
+  return ui.rtTurn === G.turnNo ? ui.rt : null; // a stale number from this turn is fine while the new one is worked out
+}
+function rtChip() {
+  const o = rivalOutlook(); if (o) ui.rtTurn = G.turnNo; const nm = escA(OP().name);
+  if (!o) return `<span class="tchip rthreat wait" data-tip="${escA(`${OP().name}'s damage before your next turn: working it out…`)}">${nm} next turn · …</span>`;
+  if (!o.max) return `<span class="tchip rthreat safe" data-tip="${escA(`${OP().name} did not hit you in ${o.n} simulated turns from where you stand now (their cards shuffled, their hand stays hidden). Out of range, no Precision or no gun yet.`)}">${ic('fire')}<span>${nm} next${o.turns > 1 ? ` ${o.turns} turns` : ''}:</span> <b>no hit expected</b></span>`;
+  const hp = ME().hp; const lvl = o.max >= hp ? 'ko' : o.max >= hp / 2 ? 'hi' : '';
+  const tip = `${OP().name}'s damage before your next turn${o.turns > 1 ? ` (they can play ${o.turns} turns in a row when the round changes)` : ''}${o.meFirst ? ' (you play first next round, so this counts from after that turn)' : ''}: about ${o.ev} on average, up to ${o.max}${o.ko ? ` (${Math.round(o.ko * 100)}% of the time that is a KO: you have ${hp} Health)` : ''}. Simulated ${o.n} times from where you stand now, with their cards shuffled (their hand stays hidden). Armor (unused Movement at End turn, Armor cards), cover and distance lower it.`;
+  return `<span class="tchip rthreat ${lvl}" data-tip="${escA(tip)}">${ic('fire')}<span>${nm} next${o.turns > 1 ? ` ${o.turns} turns` : ''}</span> <b>~${o.ev}</b><span class="rt-max">up to <b>${o.max}</b></span>${lvl === 'ko' ? '<span class="rt-ko">KO risk</span>' : ''}</span>`;
+}
+// wb-r2: FIRE says the real requirement and where it comes from: "needs 4: Ranger 6 −1 Mark −1 Steady"
+function reqLine(sp) {
+  if (sp.melee) return 'always hits';
+  const gun = escA(wdef(ME().guns[sp.gi]).name.replace(/ “.*”/, ''));
+  if (sp.rookie) return `needs ${sp.need}: rookie step`;
+  const mods = [sp.coverNeed ? `+${sp.coverNeed} cover` : '', sp.long ? `+${sp.long} long` : '', sp.accuracy ? `−${sp.accuracy} Mark` : '', sp.steady ? `−${sp.steady} Steady` : ''].filter(Boolean);
+  return mods.length ? `needs ${sp.need}: ${gun} ${sp.printed} ${mods.join(' ')}` : `needs ${sp.need}+ (${gun})`;
 }
 function topHTML() {
   const mine = myTurn();
@@ -899,7 +1002,7 @@ function fieldHTML() {
   const rangeTxt = bands.length ? (inB ? ` · in range` : ` · <span style="color:var(--danger)">out of range</span>`) : '';
   const mini = `<span class="mini" role="img" aria-label="You at location ${me.pos + 1}, rival at ${o.pos + 1}, distance ${d}">${G.envs.map(e => { const y = me.pos === e.w, r = o.pos === e.w; return `<i class="${e.state} ${cl.includes(e.w) ? 'ne' : ''} ${y && r ? 'yr' : y ? 'y' : r ? 'r' : ''}">${y && r ? '' : y ? 'Y' : r ? 'R' : ''}</i>`; }).join('')}</span>`;
   return `<section class="fieldwrap" aria-label="Battlefield"><div class="field-head"><span class="lbl">The circle</span>${mini}<span class="fh-note">${final ? '<b style="color:var(--danger)">Final circle</b>' : `Closes after rounds ${WD.TUNE.closeAfter.filter(r => r >= G.round).join(', ')}`}</span><span class="distchip">Distance ${d}${rangeTxt}${covTxt}</span><span class="ophp">${o.name} <b class="mono">${Math.max(0, o.hp)}</b>/${HPMAX()}</span></div>
-    <div class="field" id="field">${tiles}</div></section>`;
+    <div class="field" id="field">${tiles}</div><button class="fscroll l" data-act="fscroll" data-id="-1" aria-label="Scroll the locations left">‹</button><button class="fscroll r" data-act="fscroll" data-id="1" aria-label="Scroll the locations right">›</button></section>`;
 }
 
 function mtabsHTML(me, op) {
@@ -1022,6 +1125,7 @@ function renderLayer() {
   const parts = {
     handoff: ui.handoff ? `<div class="hand-off"><div><div class="lbl">Pass &amp; play</div><h2>Pass to ${G.players[G.turn].name}</h2><p style="color:var(--muted)">Hands stay hidden until the next operator taps.</p><button class="btn sig" data-act="takeover">I'm ${G.players[G.turn].name} — show my hand</button></div></div>` : '',
     sheet: ui.sheet ? `<div class="scrim" data-act="scrim"><div class="sheet ${['codex', 'rules', 'loot', 'item', 'loc', 'scrap', 'perk', 'load'].includes(ui.sheet.type) ? 'wide' : ''}" role="dialog" aria-modal="true">${sheetHTML()}</div></div>` : '',
+    rrep: repPanel(),
     banner: ui.play ? `<button class="rv-skip" data-act="skipplay" aria-label="Skip the rival's turn">▸▸</button>` : '',
     tb: ui.tb ? `<div class="turnban ${ui.tb.cls}" role="status"><b>${ui.tb.txt}</b><small>${ui.tb.sub}</small></div>` : '',
     toast: ui.toast ? `<div class="toast" role="status">${ui.toast}</div>` : '',
@@ -1276,11 +1380,11 @@ function sqDiff(b) {
   queuePops(pops.sort((x, y) => (x.kind === 'rally') - (y.kind === 'rally')));
 }
 // play a card / Play all, then light up whatever Squad lines and Rallies that fired
-function playAct(fn) { const b = sqSnap(); const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return r; } ui.rivalSum = null; ui.sheet = null; ui.moveMode = false; sqDiff(b); after(); return r; }
+function playAct(fn) { const b = sqSnap(); const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return r; } ui.rivalSum = null; ui.repOpen = false; ui.sheet = null; ui.moveMode = false; sqDiff(b); after(); return r; }
 function dmgLine(pl) { const h = pl.dmgHist || []; const n = h.length ? h[h.length - 1] : 0; return n ? `you dealt ${n} damage` : 'no damage dealt'; }
 function fpLine(pl) { const h = pl.fpHist; if (!h.length) return ''; const n = Math.round(h[h.length - 1]); const p = h.length > 1 ? Math.round(h[h.length - 2]) : null; return `Firepower ${n}${p == null ? '' : n > p ? ` ▲${n - p}` : n < p ? ` ▼${p - n}` : ' ='}${pl.turnSquads ? ` · Squad ×${pl.turnSquads}` : ''}`; }
 function toast(msg) { ui.toast = msg; clearTimeout(ui.toastT); ui.toastT = setTimeout(() => { ui.toast = null; renderLayer(); }, 2600); renderLayer(); }
-function rivalBanner() { if (ui.mode === 'ai' && !G.over) setTimeout(() => { const p = G.players[ui.me]; turnBanner('Rival’s turn', dmgLine(p)[0].toUpperCase() + dmgLine(p).slice(1), 'them'); }, 0); }
+function rivalBanner() { if (ui.mode === 'ai' && !G.over) setTimeout(() => { if (!G || G.over || G.turn === ui.me) return; const p = G.players[ui.me]; turnBanner('Rival’s turn', dmgLine(p)[0].toUpperCase() + dmgLine(p).slice(1), 'them'); }, 0); }
 // wb-first-shot: a match has no save, so leaving the page by accident (a sideways swipe on the location strip, the back
 // button) must not end it. The page asks before unloading, and Back inside a match is caught and answered with a toast.
 const inMatch = () => !!(G && !G.over && ui.screen !== 'start');
@@ -1291,7 +1395,7 @@ function newMatch(mode, o = {}) {
   guardHistory();
   ui.mode = mode; ui.me = 0; ui.sheet = null; ui.moveMode = false; ui.burnMode = false; ui.busy = false; ui.handoff = false; ui.screen = 'game'; ui.tab = 'hand'; ui.overSeen = false; ui.meta = null; ui.daily = o.daily || null;
   const ok = WD.unlockedOps(ui.prof); const ops = o.daily ? [] : ui.ops.filter(k => ok.includes(k));
-  ui.rivalSum = null;
+  ui.rivalSum = null; ui.rivalRep = null; ui.repOpen = false; ui.rr = null; ui.hpEnd = null; ui.hpFx = null; ui.endArm = null; ui.rtK = null; ui.rt = null; ui.rtTurn = null;
   G = WD.newGame(Object.assign({ mode, names: mode === 'ai' ? ['You', 'Rival'] : ['Operator 1', 'Operator 2'], ops }, o.daily ? { seed: WD.dailySeed(o.daily) } : {}));
   if (mode === 'hotseat') ui.me = G.turn;
   render(); after(); if (G.turn === ui.me) turnBanner('Your turn', 'Round 1 · drop in', 'me');
@@ -1333,11 +1437,12 @@ function playStep() {
 function finishPlay() {
   const P = ui.play; if (!P) return; clearTimeout(P.t);
   G = P.real; ui.play = null; ui.fx = null; ui.banner = null; ui.busy = false;
-  if (ui.mode === 'ai') ui.rivalSum = rivalSummary(P.frames, P.hp0, P.pos0);
-  if (!G.over) { const lost = P.hp0 - ME().hp; turnBanner('Your turn', `Round ${G.round}${lost > 0 ? ` · you took ${lost}` : ''}`, 'me'); }
+  if (ui.mode === 'ai') { rrAdd(P.frames, P.hp0); ui.rivalSum = rivalSummary(P.frames, P.hp0, P.pos0); }
+  if (ui.mode === 'ai' && (G.over || G.turn === ui.me)) { rrDone(); const R = ui.rivalRep; if (R && (R.shots.length || R.lost > 0)) ui.rivalSum = `<span class="hl-rep">${repText(R, true)}</span>`; }
+  if (!G.over && G.turn === ui.me) { const R = ui.rivalRep; turnBanner('Your turn', `Round ${G.round}${R && R.lost > 0 ? ` · −${R.lost} Health` : ''}`, 'me'); }
   after();
 }
-function act(fn, keep) { const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return r; } ui.rivalSum = null; if (!keep) ui.sheet = null; ui.moveMode = false; after(); return r; }
+function act(fn, keep) { const r = fn(); if (!r || !r.ok) { toast(r ? r.err : 'Not allowed.'); return r; } ui.rivalSum = null; ui.repOpen = false; if (!keep) ui.sheet = null; ui.moveMode = false; after(); return r; }
 function colRect(w) { const el = document.querySelector(`.envw[data-w="${w}"] .lc-stack, .envw[data-w="${w}"]`); return el ? el.getBoundingClientRect() : null; }
 function postFx() {
   const FX = ui.fx; if (!FX || !ui.play) return;
@@ -1390,7 +1495,7 @@ function after() {
   if (ui.mode === 'ai' && !G.over && G.turn !== ui.me && !ui.busy) {
     ui.busy = true; render();
     setTimeout(() => {
-      const real = G; const frames = []; real._rec = frames; const hp0 = ME().hp, pos0 = OP().pos;
+      rrStart(); const real = G; const frames = []; real._rec = frames; const hp0 = ME().hp, pos0 = OP().pos;
       WD.aiTurn(real, 1 - ui.me); real._rec = null;
       ui.play = { frames, i: 0, real, t: 0, hp0, pos0 }; ui.tab = 'intel' === ui.tab ? 'intel' : ui.tab;
       playStep();
@@ -1408,6 +1513,8 @@ document.addEventListener('click', e => {
   const S = ui.sheet; const me = G ? ME() : null;
   switch (a) {
     case 'skipplay': finishPlay(); break;
+    case 'rrepx': ui.repOpen = false; renderLayer(); break;
+    case 'fscroll': { const f = document.querySelector('.h-map .field'); if (f) f.scrollBy({ left: +id * Math.max(120, f.clientWidth * 0.7), behavior: RM() ? 'auto' : 'smooth' }); break; }
     case 'new': if (ui.play) { clearTimeout(ui.play.t); ui.play = null; ui.fx = null; } newMatch(id); break;
     case 'home': ui.screen = 'start'; ui.sheet = null; G = null; render(); break;
     case 'sheet': ui.sheet = { type: id, tab: 'weapons' }; renderLayer(); break;
@@ -1466,8 +1573,10 @@ document.addEventListener('click', e => {
       ui.sheet = env && env.loot.length && env.cache.searched ? { type: 'item', id: env.loot[0].iid, sel: [], trade: [], slideIn: true } : null;
       ui.newTop = w; clearTimeout(ui.newTopT); ui.newTopT = setTimeout(() => { ui.newTop = null; }, 900);
       after(); flyLoot(info); break; }
-    case 'endturn': { if (owesSpoils()) { ui.sheet = { type: 'spoils' }; renderLayer(); break; } ui.gunSel = null; ui.moveMode = false; ui.burnMode = false; const r = act(() => WD.endTurn(G, ui.me)); if (r && r.ok && !G.spoils) rivalBanner(); break; }
-    case 'spoilpick': case 'spoilskip': { if (!G.spoils || G.spoils.p !== ui.me) return; const r = WD.takeSpoils(G, ui.me, a === 'spoilpick' ? id : null); if (!r.ok) return toast(r.err); ui.sheet = null; after(); if (!G.over) rivalBanner(); break; }
+    case 'endturn': { if (owesSpoils()) { ui.sheet = { type: 'spoils' }; renderLayer(); break; }
+      if (myTurn()) { const w = unusedWhy(me); if (w && !(ui.endArm && ui.endArm.k === G.turnNo && ui.endArm.until > Date.now())) { ui.endArm = { k: G.turnNo, until: Date.now() + 4000, why: w }; clearTimeout(ui.endArmT); ui.endArmT = setTimeout(() => { ui.endArm = null; if (G) render(); }, 4100); render(); break; } }
+      ui.endArm = null; ui.hpEnd = me.hp; ui.logRefEnd = G.log[G.log.length - 1]; ui.repOpen = false; ui.gunSel = null; ui.moveMode = false; ui.burnMode = false; const r = act(() => WD.endTurn(G, ui.me)); if (r && r.ok && !G.spoils) rivalBanner(); break; }
+    case 'spoilpick': case 'spoilskip': { if (!G.spoils || G.spoils.p !== ui.me) return; if (ui.hpEnd == null) { ui.hpEnd = me.hp; ui.logRefEnd = G.log[G.log.length - 1]; } const r = WD.takeSpoils(G, ui.me, a === 'spoilpick' ? id : null); if (!r.ok) return toast(r.err); ui.sheet = null; after(); if (!G.over) rivalBanner(); break; }
     case 'sweepsheet': ui.sheet = { type: 'sweep', order: [] }; renderLayer(); break;
     case 'sweeppick': { const i = S.order.indexOf(id); if (i >= 0) S.order.splice(i, 1); else S.order.push(id); renderLayer(); break; }
     case 'sweepok': { const pk = ME().peek || []; const order = S.order.concat(pk.filter(i => !S.order.includes(i))); const r = WD.arrange(G, ui.me, id === 'keep' ? pk : order); if (!r.ok) return toast(r.err); ui.sheet = null; toast(id === 'keep' ? 'Deck left as it was.' : 'Top of your deck arranged.'); render(); break; }
@@ -1483,6 +1592,13 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (ui.sheet && ui.sheet.type !== 'over') closeSheet(); else if (ui.moveMode || ui.burnMode) { ui.moveMode = false; ui.burnMode = false; render(); } }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.act === 'moveto') { e.preventDefault(); e.target.click(); }
 });
+// wb-r2: End turn asks once (tap again) while something useful is left this turn
+function unusedWhy(me) {
+  const w = []; const live = me.hand.filter(i => !WD.cardDef(G, i).jam).length; if (live) w.push(`${live} card${live > 1 ? 's' : ''} in hand`);
+  if (me.res.intel > 0 && WD.buysLeft(G, ui.me) > 0) w.push(`${me.res.intel} Intel`);
+  const fo = fireOdds(); if (fo && fo.pct >= 5) w.push(`a ${fo.pct}% shot`);
+  return w.join(', ');
+}
 function closeSheet() { const cur = ui.sheet; if (cur && cur.type === 'perk' && G && ME().perkOffer && myTurn()) return; if (cur && cur.type === 'spoils' && G && G.spoils) return toast('Take one of the Spoils, or Skip.'); if (cur && cur.type === 'over') ui.overSeen = true; const then = cur && cur.then; ui.sheet = then ? { type: then } : null; if (!ui.sheet && G && G.over && !ui.overSeen) ui.sheet = { type: 'over' }; render(); }
 
 /* ---------- hold for info (touch) / hover (mouse) ---------- */
@@ -1520,6 +1636,8 @@ document.addEventListener('pointermove', e => {
 }, true);
 document.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') { clearTimeout(LP.timer); if (LP.el) LP.el.classList.remove('holding'); } }, true);
 document.addEventListener('pointercancel', () => clearTimeout(LP.timer), true);
+// wb-r2: a mouse wheel scrolls the location strip sideways when it is wider than the screen
+document.addEventListener('wheel', e => { const f = e.target.closest && e.target.closest('.h-map .field.ovf'); if (!f || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; const max = f.scrollWidth - f.clientWidth; if ((e.deltaY < 0 && f.scrollLeft <= 0) || (e.deltaY > 0 && f.scrollLeft >= max - 1)) return; f.scrollLeft += e.deltaY; e.preventDefault(); }, { passive: false });
 // right click (desktop) inspects like a long press on touch: the card face if there is one, else the explanation
 document.addEventListener('contextmenu', e => {
   if (!e.target.closest('#app, #layer')) return; e.preventDefault();
