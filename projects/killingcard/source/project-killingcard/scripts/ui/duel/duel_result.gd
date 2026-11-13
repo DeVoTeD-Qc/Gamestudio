@@ -97,6 +97,9 @@ func _rebuild() -> void:
 	var decks: Array = setup.get("decks", [])
 	for i: int in 2:
 		var d: Dictionary = decks[i] if i < decks.size() and decks[i] is Dictionary else {}
+		if not d.has("name") and i < names.size():
+			# kc-r2-fixes (playtest r2 "Deck: ?"): the AI's deck is a preset; find it by id, else by name.
+			d = _preset_for(String(setup.get("opponent_id", "")) if i == 1 else "", String(names[i]))
 		sides.add_child(_side_panel(i, String(names[i]) if i < names.size() else "", d, i == winner, int(scores[i]) if i < scores.size() else 0))
 	# Records and anything new.
 	var rec_p: PanelContainer = W.panel(Color("#141A1F"), W.PANEL_RIM, 10.0)
@@ -168,6 +171,15 @@ func _act(text: String, variation: StringName, parent: Control) -> Button:
 	b.clip_text = true
 	parent.add_child(b)
 	return b
+
+
+static func _preset_for(id: String, shown_name: String) -> Dictionary:
+	var d: Dictionary = DuelViews.preset(id) if id != "" else {}
+	if d.is_empty():
+		for p: Dictionary in DuelViews.presets():
+			if String(p.get("name", "")).to_lower() == shown_name.to_lower():
+				return p
+	return d if not d.is_empty() else {"name": shown_name}
 
 
 func _side_panel(i: int, who: String, d: Dictionary, won: bool, score: int) -> PanelContainer:

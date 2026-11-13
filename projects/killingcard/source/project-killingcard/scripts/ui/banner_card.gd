@@ -120,8 +120,8 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 	if rule_text == "":
 		# A unit with no ability says so, dimmed (the lore is in the inspector).
 		rule_text = "No ability" if entry.has("fp") else ""
-		rule.add_theme_color_override(&"default_color", Color("#7E8890"))
-	IconText.fill(rule, rule_text, RULE_PX, CardLook.RULE_COLOR)
+		rule.add_theme_color_override(&"default_color", Color("#A3ADB5"))
+	IconText.fill(rule, rule_text, RULE_PX, CardLook.RULE_COLOR if String(entry.get("rule", "")) != "" else Color("#A3ADB5"))
 	rule_plate.add_child(rule)
 	var sub: Label = Label.new()
 	sub.name = "SubLabel"
@@ -168,7 +168,7 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 ## kc-layout-a: a hand card's rule line height and font size (16 px on the canvas = 11.5 pt on the
 ## phone; never under 10 pt).
 const RULE_LINE_H: float = 20.0
-const RULE_PX: int = 16
+const RULE_PX: int = 17  # kc-r2-fixes: >= 12 pt on an 844x390 phone (0.72 pt per px)
 
 
 ## kc-layout-a (the head's L2): how many rule lines the card shows (0 compact, 1 mid, 2 full); the

@@ -53,6 +53,9 @@ func test_tap_on_a_card_only_closes_the_recap() -> void:
 	var m: Control = s[1]
 	var c: Node = s[2]
 	var rc: RulesCard = c.state.sides[0].hand[0]
+	c.state.sides[0].supply = maxi(c.state.sides[0].supply, rc.card.cost)  # kc-r2-fixes: affordable, so it stays selected
+	c.refresh()
+	await _frames(2)
 	m.show_round_recap(RECAP, "")
 	await _frames(2)
 	await _tap(vp, _chip_point(m, m.get_hand().get_card(rc.uid)))

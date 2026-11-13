@@ -113,6 +113,16 @@ const AMBER: Color = Color(0.961, 0.722, 0.239)
 ## shown; a vertical swipe or the mouse wheel scrolls, a sideways drag still places the card).
 var hand_fit: Dictionary = {}
 var hand_scroll: int = 0
+## kc-r2-fixes (playtest r2: "the hand reflows after each play, so my next drag grabbed the
+## Protector"): within one Deploy the grid keeps the size it had for the most cards it held
+## (begin_deploy() resets it), and the cards keep the order they arrived in (an undone card goes
+## back to its old place): a play only closes its gap, the others slide up in order.
+var _fit_hold_items: int = 0
+var _fit_hold_cards: int = 0
+var _seq: Dictionary = {}       # rules uid -> arrival index (stable hand order)
+var _next_seq: int = 0
+var _prev_pos: Dictionary = {}  # rules uid -> position before the last rebuild (slide, not jump)
+const SLIDE_S: float = 0.14
 var _more_up: Label = null
 var _more_down: Label = null
 
@@ -246,8 +256,12 @@ func set_read_only(value: bool) -> void:
 ## cards: Array of {name, type, cost, fp?, armor?, text, card_type?, weapon_class?, keywords?, elite?}
 ## (card_info.gd chip()).
 func set_hand(cards: Array) -> void:
+	cards = stable_order(cards)
 	_cards_data = cards
+	_prev_pos.clear()
 	for child: Node in _row.get_children():
+		if child != _op_chip and int(child.get_meta(&"uid", -1)) >= 0:
+			_prev_pos[int(child.get_meta(&"uid", -1))] = (child as Control).position
 		_row.remove_child(child)
 		child.queue_free()
 	_op_chip = null
@@ -264,6 +278,25 @@ func set_hand(cards: Array) -> void:
 	_apply_styles()
 	_caption.text = "HAND %d/%d" % [cards.size(), HAND_CAP]
 	_fit_cards.call_deferred()
+
+
+## kc-r2-fixes: the cards in the order they first came into the hand (new ones last).
+func stable_order(cards: Array) -> Array:
+	for c: Dictionary in cards:
+		var uid: int = int(c.get("uid", -1))
+		if uid >= 0 and not _seq.has(uid):
+			_seq[uid] = _next_seq
+			_next_seq += 1
+	var out: Array = cards.duplicate()
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(_seq.get(int(a.get("uid", -1)), 1 << 30)) < int(_seq.get(int(b.get("uid", -1)), 1 << 30)))
+	return out
+
+
+## kc-r2-fixes: a new Deploy: the grid may re-fit to the new hand size again.
+func begin_deploy() -> void:
+	_fit_hold_items = 0
+	_fit_hold_cards = 0
 
 
 func get_cards() -> Array[Node]:
@@ -486,7 +519,9 @@ func _fit_cards() -> void:
 	var lines: int = 0
 	if _grid_rect.size != Vector2.ZERO:
 		var min_h: float = BoardMetrics.X1_MIN_H if compact else BoardMetrics.X1_MIN_H_DESKTOP
-		hand_fit = BoardMetrics.hand_fit(_grid_rect.size, items.size(), _gap, min_h, n)
+		_fit_hold_items = maxi(_fit_hold_items, items.size())
+		_fit_hold_cards = maxi(_fit_hold_cards, n)
+		hand_fit = BoardMetrics.hand_fit(_grid_rect.size, _fit_hold_items, _gap, min_h, _fit_hold_cards)
 		card_size = hand_fit["card"]
 		cols = int(hand_fit["cols"])
 		lines = int(hand_fit.get("rule_lines", 0))
@@ -514,8 +549,24 @@ func _fit_cards() -> void:
 		elif is_op or bool(c.get_meta(&"playable", true)):
 			y -= DROP_PX
 		c.position = Vector2(roundf(x), roundf(y))
+		_slide_from_old_place(c)
+	_prev_pos.clear()
 	_place_more_hints(false, 0, n, n, grid)
 	cards_placed.emit()
+
+
+## kc-r2-fixes: a card that moved up to close a gap slides there (the eye follows it); none in
+## headless runs or with reduced motion.
+func _slide_from_old_place(c: Control) -> void:
+	var uid: int = int(c.get_meta(&"uid", -1))
+	if uid < 0 or not _prev_pos.has(uid) or _reduced_motion() or DisplayServer.get_name() == "headless":
+		return
+	var from: Vector2 = _prev_pos[uid]
+	var to: Vector2 = c.position
+	if from.distance_to(to) < 2.0:
+		return
+	c.position = from
+	c.create_tween().tween_property(c, "position", to, SLIDE_S).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 ## kc-ipad-cards: "▲ n MORE" / "▼ n MORE" over the top / bottom edge of a scrolling hand.

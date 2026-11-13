@@ -394,7 +394,9 @@ func _apply_compact() -> void:
 			b.custom_minimum_size.y = button_height()
 
 
-## Picks or drops a killstreak (one tap). Returns false when it can't be picked (all slots full).
+## Picks or drops a killstreak (one tap). kc-r2-fixes (playtest r2: "tap one to swap" made you drop
+## one first): with every slot full, tapping an unpicked killstreak swaps it in for the oldest pick
+## (the one the subtitle names). Returns true when the picks changed.
 func toggle(id: StringName) -> bool:
 	var slots: int = _slots()
 	_error.hide()
@@ -402,13 +404,25 @@ func toggle(id: StringName) -> bool:
 		picked.erase(id)
 	elif picked.size() < slots:
 		picked.append(id)
-	else:
-		_error.text = "All %d slots are full: drop a picked killstreak first." % slots
+	elif slots > 0:
+		var out: StringName = picked[0]
+		picked.remove_at(0)
+		picked.append(id)
+		_error.text = "Swapped: %s in, %s out." % [_item_name(id), _item_name(out)]
 		_error.show()
-		_refresh()
+	else:
 		return false
 	_refresh()
 	return true
+
+
+func _item_name(id: StringName) -> String:
+	var r: RunProgress = run()
+	if r != null:
+		for item: LoadoutItem in r.config.killstreak_pool:
+			if item != null and item.id == id:
+				return item.display_name
+	return String(id).capitalize()
 
 
 ## BEGIN RUN: stores the picks and opens the run map. Returns "" or the reason it can't.
@@ -441,7 +455,7 @@ func _refresh() -> void:
 		tile.set_selected(id in picked, "PICKED", "TAP TO PICK")
 	# kc-loadout-clean: the subtitle says what BEGIN RUN still needs (tap a picked tile to drop it).
 	if picked.size() == slots:
-		_subtitle.text = "%d of %d killstreaks · tap one to swap" % [picked.size(), slots]
+		_subtitle.text = "%d of %d killstreaks · tap another to swap it in for %s" % [picked.size(), slots, _item_name(picked[0])]
 	else:
 		_subtitle.text = "Pick %d killstreaks  ·  %d of %d picked" % [slots, picked.size(), slots]
 	_begin_button.disabled = picked.size() != slots

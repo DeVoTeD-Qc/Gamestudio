@@ -147,7 +147,7 @@ func test_place_operator_tap_tap_phone() -> void:
 	await _tap(vp, m.get_operator_handle().get_global_rect().get_center())
 	assert_eq(c.selection.get("kind"), &"operator", "tap on the panel selects the Operator")
 	assert_eq(panel.theme_type_variation, &"OperatorSelected", "Operator panel selected style")
-	assert_eq(m.get_board().get_lanes()[1].target_text, "PLACE HERE", "lanes offer placement")
+	assert_eq(m.get_board().get_lanes()[1].target_text, "PLAY HERE", "lanes offer placement (one term, kc-r2-fixes)")
 	await _tap(vp, _row_point(m.get_board().get_lanes()[1]))
 	var last: Dictionary = c.intent_log.back() if not c.intent_log.is_empty() else {}
 	assert_eq(last.get("intent", {}).get("type"), RulesIntent.PLACE_OPERATOR, "engine got place_operator")
@@ -275,14 +275,14 @@ func test_refused_not_enough_supply() -> void:
 	var chip: Control = m.get_hand().get_card(rc.uid)
 	assert_eq(chip.theme_type_variation, &"HandCardDim", "unaffordable card is dimmed")
 	await _tap(vp, _chip_point(m, chip))
-	var lane: Control = m.get_board().get_lanes()[0]
-	assert_eq(lane.target_state, &"invalid", "lanes refuse the card")
-	assert_eq(lane.target_text, "NEED %d SUPPLY" % rc.card.cost, "lane badge gives the reason")
-	await _tap(vp, _row_point(lane))
+	# kc-r2-fixes (playtest r2): the toast says why and the card goes back (not left picked up).
 	assert_true(m.get_toast_text().contains("Not enough Supply"), "toast: %s" % m.get_toast_text())
+	assert_true(c.selection.is_empty(), "an unaffordable card is not left selected")
+	var lane: Control = m.get_board().get_lanes()[0]
+	assert_true(lane.target_state != &"valid", "no lane offers it")
+	await _tap(vp, _row_point(lane))
 	assert_eq(c.intent_log.size(), 0, "refused play never reaches the engine")
 	assert_true(c.state.sides[0].plays.is_empty(), "nothing queued")
-	assert_false(c.selection.is_empty(), "card stays selected after a refusal")
 	_despawn(vp)
 
 
@@ -360,6 +360,7 @@ func test_undo_then_ready_phone() -> void:
 	me.supply += c.state.operator_cost()  # kc-syn: the Operator's placement costs Supply
 	c.select_operator()
 	c.play_at(1)
+	await _frames(2)  # the hand re-fits a frame after a rebuild (the undone card is back in its place)
 	await _tap(vp, _chip_point(m, m.get_hand().get_card(rc.uid)))
 	await _tap(vp, _row_point(m.get_board().get_lanes()[0]))
 	assert_eq(me.plays.size(), 2, "Operator + unit queued")

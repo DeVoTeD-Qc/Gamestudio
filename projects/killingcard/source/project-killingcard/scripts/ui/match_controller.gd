@@ -195,6 +195,8 @@ func _on_screen_ready() -> void:
 		board.unit_drag_moved.connect(func(pos: Vector2) -> void: _on_drag_moved(-1, pos), d)
 		board.unit_drag_ended.connect(_on_drag_ended, d)
 	_screen.ready_pressed.connect(press_ready, d)
+	if _screen.has_signal(&"fast_fights_toggled"):
+		_screen.fast_fights_toggled.connect(_on_fast_toggled)
 	if _screen.has_signal(&"rail_inspected"):
 		_screen.rail_inspected.connect(_on_rail_inspected, d)
 	if _screen.has_signal(&"item_inspected"):
@@ -436,6 +438,51 @@ func is_busy() -> bool:
 	return _busy
 
 
+## kc-r2-fixes: FAST on the match screen (Settings.fast_fights; the tutorial always plays in full).
+func fast_fights_on() -> bool:
+	return not _is_tutorial() and _screen != null and _screen.has_method(&"fast_fights") and bool(_screen.fast_fights())
+
+
+func _on_fast_toggled(on: bool) -> void:
+	var fx: Control = _fx()
+	if fx != null and fx.has_method(&"set_summary_only"):
+		fx.set_summary_only(on and not _is_tutorial())
+
+
+## kc-r2-fixes (playtest r2 "I tapped to skip and it still took 15-25 s"): while a round plays, any
+## left click / touch anywhere skips it, before a control under the finger can take the tap (the
+## killfeed opened its explainer instead). SPEED, FAST and the menu still work; right click inspects.
+func _input(event: InputEvent) -> void:
+	if state == null or not _busy or is_pause_menu_open() or is_end_banner_open() or _is_tutorial():
+		return
+	var pos: Vector2 = Vector2.INF
+	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed \
+			and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		pos = (event as InputEventMouseButton).position
+	elif event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed:
+		pos = (event as InputEventScreenTouch).position
+	if pos == Vector2.INF or _screen == null:
+		return
+	if _screen.get_inspector().is_open():
+		return
+	for c: Control in _skip_exempt():
+		if c != null and c.is_visible_in_tree() and c.get_global_rect().has_point(pos):
+			return
+	get_viewport().set_input_as_handled()
+	skip_feedback()
+
+
+func _skip_exempt() -> Array[Control]:
+	var out: Array[Control] = []
+	if _screen.has_method(&"get_speed_button"):
+		out.append(_screen.get_speed_button())
+	if _screen.has_method(&"get_fast_button"):
+		out.append(_screen.get_fast_button())
+	if _screen.has_method(&"get_badge"):
+		out.append(_screen.get_badge(&"menu"))
+	return out
+
+
 ## Fast-forwards the round's feedback (F key, or a tap while it plays).
 func skip_feedback() -> void:
 	var fx: Control = _fx()
@@ -539,6 +586,9 @@ func _play_round(supply_unspent: int, hand_size: int) -> void:
 		last_playback_model_s = FirefightResolver.playback_seconds(resolved)
 		last_playback_skipped = false
 		last_fight_ms = 0
+		# kc-r2-fixes: FAST plays the round as its column results only (about 3 s).
+		if "summary_only" in fx:
+			fx.summary_only = fast_fights_on()
 		var t0: int = Time.get_ticks_msec()
 		await fx.play(resolved)
 		last_playback_ms = Time.get_ticks_msec() - t0
@@ -612,8 +662,32 @@ func _begin_deploy() -> void:
 		open_mulligan()
 		return
 	_deploy_hint()
+	_rail_pointer()
 	if _screen.has_method(&"offer_explainer") and not _is_tutorial():
 		_screen.offer_explainer(met_now, "round%d" % state.round_number)
+
+
+## kc-r2-fixes (playtest r2: "the left rail means nothing until a streak turns READY"): once per
+## profile, at the start of round 2, one line says what the killstreak tiles count.
+const RAIL_POINTER_FLAG: StringName = &"ks_rail_pointer"
+
+
+func _rail_pointer() -> bool:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	# Not in headless test runs (Settings not persisting): the tests' toasts stay as they were.
+	if st == null or not bool(st.get(&"persist")) or _is_tutorial() or state.round_number < 2 \
+			or bool(st.call(&"is_seen", RAIL_POINTER_FLAG)):
+		return false
+	var me: RulesSide = state.sides[me_side]
+	var parts: PackedStringArray = []
+	for item: LoadoutItem in me.setup.killstreaks:
+		if item != null:
+			parts.append("%s at %d" % [item.display_name, StreakTracker.threshold_for(state, me_side, item)])
+	if parts.is_empty():
+		return false
+	st.call(&"mark_seen", RAIL_POINTER_FLAG)
+	_screen.show_toast("Left rail: your killstreaks fill with your streak (eliminations in a row): %s." % ", ".join(parts), 6.0)
+	return true
 
 
 func _reveal_off() -> void:
@@ -1037,6 +1111,8 @@ func select_card(uid: int) -> void:
 	if rc.card.cost > state.sides[me_side].supply:
 		_screen.show_toast(PlayText.describe(state.can_submit(me_side, RulesIntent.play_card(uid, 0)),
 				{"name": rc.card.display_name})["reason"])
+		# kc-r2-fixes (playtest r2): a card you can't pay for is not left picked up over the board.
+		clear_selection()
 	elif _unit_target_kind() == &"friendly":
 		_screen.show_toast("Pick one of your units to move." if _selection_moves() else "Pick one of your units.")
 	elif _unit_target_kind() == &"enemy":
@@ -1052,6 +1128,7 @@ func select_operator() -> void:
 	var s: RulesSide = state.sides[me_side] if state != null else null
 	if s != null and s.operator_can_deploy and not _has_play(&"place") and state.operator_cost() > s.supply:
 		_screen.show_toast("Not enough Supply: your Operator costs %d, you have %d." % [state.operator_cost(), s.supply])
+		clear_selection()
 
 
 ## Killstreak button: select it for targeting, or queue it at
@@ -1126,7 +1203,10 @@ func _submit(intent: Dictionary) -> Dictionary:
 				_screen.show_toast("%s planned%s: it goes off at Reveal." % [what, " on %s" % ZONE_WORDS[zone] if state.is_zone(zone) else ""])
 	else:
 		_screen.show_toast(PlayText.describe(res, _ctx())["reason"])
-		_show_selection()
+		if StringName(res.get("code", &"")) == &"not_enough_supply":
+			clear_selection()  # kc-r2-fixes: nothing to do with it this Deploy; put it back
+		else:
+			_show_selection()
 	return res
 
 
@@ -1155,27 +1235,28 @@ func check_play(zone: int) -> Dictionary:
 	return _yes(_badge(kind))
 
 
+## kc-r2-fixes (playtest r2: three names for "put it here"): one term, PLAY HERE, for every card,
+## Field, tactic and the Operator's first placement. Other actions keep their own verb (MOVE,
+## ROTATE, CALL IN).
+const PUT_HERE: String = "PLAY HERE"
+
+
 func _badge(kind: StringName) -> String:
 	match selection.get("kind"):
 		&"agile":
 			return "MOVE HERE"
 		&"operator":
 			var s: RulesSide = state.sides[me_side]
-			return "PLACE HERE" if s.operator_can_deploy and not _has_play(&"place") else "ROTATE HERE"
+			return PUT_HERE if s.operator_can_deploy and not _has_play(&"place") else "ROTATE HERE"
 		&"item":
 			var item: LoadoutItem = state.find_item(me_side, selection["id"])
 			if item != null and item.slot == DataEnums.LoadoutSlot.KILLSTREAK:
 				return "CALL IN HERE"
-			return "TARGET COLUMN"
+			return PUT_HERE
 	var card: CardData = state.sides[me_side].find_in_hand(int(selection["uid"])).card
-	match card.card_type:
-		DataEnums.CardType.UNIT:
-			return "PLAY HERE"
-		DataEnums.CardType.EQUIPMENT:
-			return "PLACE HERE"
-	if kind == &"friendly":
+	if card.card_type != DataEnums.CardType.UNIT and card.card_type != DataEnums.CardType.EQUIPMENT and kind == &"friendly":
 		return "MOVE HERE"
-	return "TARGET COLUMN" if card.requires_zone_choice() else "PLAY"
+	return PUT_HERE
 
 
 ## Name / kind of the selection, for play_text.describe().
@@ -1656,6 +1737,8 @@ func _on_card_drag_started(uid: int, pos: Vector2) -> void:
 	_dismiss_recap()
 	if not (selection.get("kind") == &"card" and int(selection["uid"]) == uid):
 		select_card(uid)
+		if selection.is_empty():
+			return  # kc-r2-fixes: can't pay for it (the toast says so): no drag
 	_dragging = true
 	var hand: Control = _screen.get_hand()
 	var chip: Control = hand.get_card(uid)
@@ -1689,6 +1772,8 @@ func _on_operator_drag_started(pos: Vector2) -> void:
 		achip.free()
 		return
 	select_operator()
+	if selection.is_empty():
+		return  # kc-r2-fixes: can't pay for the Operator (the toast says so): no drag
 	_dragging = true
 	# A small chip with the Operator's name, not a copy of the whole panel.
 	var chip: PanelContainer = PanelContainer.new()
@@ -1958,8 +2043,10 @@ func _art_line(art: BannerArt) -> String:
 		# kc-cod2: n of the chassis' (or the Operator weapon's) licensed arts, plus the MW3 credit.
 		var pool: Array[StringName] = BannerArtDB.licensed_pool(art.card_id)
 		var n: int = maxi(1, pool.find(art.id) + 1)
-		return "Banner: %s · %s %d of %d · MW3 calling card (reference art, private pitch)" % [what,
-				"mastery tier" if art.mastery_tier > 0 else "art", n, maxi(1, pool.size())]
+		# kc-r2-fixes (release blocker): no build or licence words in front of the player.
+		if pool.size() <= 1:
+			return "Art: %s" % what
+		return "Art: %s · %d of %d" % [what, n, pool.size()]
 	var alts: Array[StringName] = BannerArtDB.alt_arts(art.card_id)
 	# kc-trait-ui: each copy comes with its own art (no EQUIP); the Codex shows every art.
 	# kc-da-ui2: no build words ("placeholder") in front of the player; a short caption.
@@ -2012,9 +2099,11 @@ func _on_rail_inspected(key: StringName) -> void:
 			for item: LoadoutItem in me.setup.killstreaks:
 				if item != null:
 					names.append("%s at %d" % [item.display_name, StreakTracker.threshold_for(state, me_side, item)])
-			_open_info({"title": "Killstreaks", "type": "streak %d" % me.streak,
-					"text": "Eliminations build your streak. %s." % ", ".join(names),
-					"status": "Amber glow: one is ready."})
+			# kc-r2-fixes (playtest r2: "STREAK 0 while two killstreaks say READY"): say that a killstreak,
+			# once earned, stays ready when the streak resets.
+			_open_info({"title": "Streak", "type": "%d elimination%s in a row" % [me.streak, "" if me.streak == 1 else "s"],
+					"text": "Each elimination adds 1. Your Operator going down resets it to 0. Killstreaks: %s." % ", ".join(names),
+					"status": "A killstreak you earned stays READY after a reset, until you call it in."})
 		&"menu":
 			_open_info({"title": "Menu", "type": "pause", "text": "Pause, settings, forfeit, quit.", "status": ""})
 		&"preview":
@@ -2035,6 +2124,13 @@ func _on_rail_inspected(key: StringName) -> void:
 		&"hand_tab":
 			_open_info({"title": "Your hand", "type": "%d cards" % me.hand.size(),
 					"text": "Opens in Deploy. Outside Deploy, PEEK shows it read-only.", "status": ""})
+		&"speed":
+			_open_info({"title": "Speed", "type": "firefight playback",
+					"text": "x1 or x2: how fast the firefight plays. Tap anywhere to skip to the result.", "status": ""})
+		&"fast":
+			_open_info({"title": "Fast", "type": "firefight playback",
+					"text": "On: each firefight shows only its column results (about 3 s). Kept for next time.",
+					"status": "On." if fast_fights_on() else "Off."})
 
 
 ## kc-syn-ui: one trait's rules from its rail chip (side &"player" / &"enemy").
@@ -2224,7 +2320,7 @@ static func _mastery_line(e: Dictionary) -> String:
 	if not BannerArtDB.has_licensed():
 		return band_line
 	var name: String = BannerArtDB.MASTERY_TIERS[clampi(tier, 1, 4) - 1]
-	return " · Mastery tier %d of 4: %s%s%s" % [tier, name, " (Base band)" if tier == 1 else " (dev preview)", band_line]
+	return " · Mastery tier %d of 4: %s%s" % [tier, name, band_line]
 
 
 # =============================================================================

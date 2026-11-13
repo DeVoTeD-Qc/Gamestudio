@@ -48,6 +48,7 @@ static func recap(state, me: int, events: Array) -> Dictionary:
 	var lost: Array[int] = [0, 0]
 	var rows: Array = []
 	var zone_ids: Array = MapData.ZONE_IDS
+	var fights: Dictionary = column_fights(events)
 	for ev: Dictionary in events:
 		match ev.get("type"):
 			RulesEvent.MODE_SCORED:
@@ -55,7 +56,11 @@ static func recap(state, me: int, events: Array) -> Dictionary:
 			RulesEvent.UNIT_ELIMINATED:
 				lost[0 if StringName(ev.get("victim_side", &"")) == me_name else 1] += 1
 			RulesEvent.ZONE_CONTROL:
-				rows.append(_row(state, me, ev, zone_ids))
+				var row: Dictionary = _row(state, me, ev, zone_ids)
+				var f: Dictionary = fights.get(StringName(ev.get("zone", &"")), {})
+				if not f.is_empty() and int(ev.get("player_units", 0)) > 0 and int(ev.get("enemy_units", 0)) > 0:
+					row["why"] = no_losses_reason(f)
+				rows.append(row)
 	if me != 0:
 		gained.reverse()
 	var t: int = target(state)
@@ -75,6 +80,72 @@ static func recap(state, me: int, events: Array) -> Dictionary:
 		plain += " " + units
 	return {"title": title, "rows": rows, "score": score, "units": units, "plain": plain,
 			"gained": gained}
+
+
+## kc-r2-fixes: per column, what its firefight did (from the round's events): zone -> {kills (any
+## side), shots, zero (0-damage shots), covered (shots at a unit with Cover), cover_from {name: true},
+## held (lethal hits survived)}. Columns with no firefight are absent.
+static func column_fights(events: Array) -> Dictionary:
+	var out: Dictionary = {}
+	var zone: StringName = &""
+	for ev: Dictionary in events:
+		match ev.get("type"):
+			RulesEvent.FIREFIGHT_STARTED:
+				zone = StringName(ev.get("zone", &""))
+				out[zone] = {"kills": 0, "shots": 0, "zero": 0, "covered": 0, "cover_from": {}, "held": 0}
+			RulesEvent.FIREFIGHT_COLUMN_ENDED:
+				zone = &""
+			RulesEvent.SHOT_FIRED:
+				if zone != &"" and int(ev.get("target_uid", -1)) >= 0:
+					var f: Dictionary = out[zone]
+					f["shots"] = int(f["shots"]) + 1
+					if int(ev.get("damage", 0)) <= 0:
+						f["zero"] = int(f["zero"]) + 1
+					if int(ev.get("cover", 0)) > 0:
+						f["covered"] = int(f["covered"]) + 1
+						for n: Variant in ev.get("cover_from", []):
+							(f["cover_from"] as Dictionary)[String(n)] = true
+			RulesEvent.UNIT_ELIMINATED:
+				if zone != &"":
+					out[zone]["kills"] = int(out[zone]["kills"]) + 1
+			RulesEvent.SURVIVED_LETHAL:
+				if zone != &"":
+					out[zone]["held"] = int(out[zone]["held"]) + 1
+	return out
+
+
+## Why a column's firefight ended with nobody eliminated, in plain words ("" when someone was).
+## f: {kills, lost?, shots, zero, covered, cover_from: {name: true}, held}.
+static func no_losses_reason(f: Dictionary) -> String:
+	if int(f.get("kills", 0)) > 0 or int(f.get("lost", 0)) > 0:
+		return ""
+	var shots: int = int(f.get("shots", 0))
+	var zero: int = int(f.get("zero", 0))
+	var covered: int = int(f.get("covered", 0))
+	var cover: String = cover_phrase(PackedStringArray((f.get("cover_from", {}) as Dictionary).keys()))
+	if shots == 0:
+		return "No losses: nobody had a target."
+	if int(f.get("held", 0)) > 0:
+		return "No losses: a lethal hit was survived (Grit)."
+	if zero >= shots and covered > 0:
+		return "No losses: %s stopped every hit." % cover
+	if zero >= shots:
+		return "No losses: every hit did 0 damage."
+	if covered > 0:
+		return "No losses: %s took 1 off each hit; none was enough to eliminate." % cover
+	return "No losses: no hit was enough to eliminate."
+
+
+## "Cover from Bulwark", "the unit's own Cover", "Cover from Bulwark and its own Cover", "Cover".
+static func cover_phrase(names: PackedStringArray) -> String:
+	var own: bool = "its own Cover" in names
+	var others: PackedStringArray = []
+	for n: String in names:
+		if n != "its own Cover":
+			others.append(n)
+	if others.is_empty():
+		return "the unit's own Cover" if own else "Cover"
+	return "Cover from %s%s" % [" and ".join(others), " and its own Cover" if own else ""]
 
 
 static func _row(state, me: int, ev: Dictionary, zone_ids: Array) -> Dictionary:

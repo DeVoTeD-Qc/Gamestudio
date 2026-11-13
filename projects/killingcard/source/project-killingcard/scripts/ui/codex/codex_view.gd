@@ -488,8 +488,8 @@ static func inspector_info(e: Dictionary, art_override: StringName = &"") -> Dic
 		banner["subname"] = sub
 	var arts: Array = e.get("arts", [])
 	var n: int = maxi(1, arts.find(art_id) + 1)
-	var art_line: String = "Banner: %s · art %d of %d%s" % [sub if sub != "" else BannerArtDB.DEFAULT_SUBNAME, n, maxi(1, arts.size()),
-			" · MW3 calling card (reference art, private pitch)" if art.licensed else ""]
+	# kc-r2-fixes (release blocker): a plain art caption, never build or licence words.
+	var art_line: String = "Art: %s · %d of %d" % [sub if sub != "" else BannerArtDB.DEFAULT_SUBNAME, n, maxi(1, arts.size())]
 	var gives: String = gives_text(card, art_id)
 	if gives != "":
 		art_line += " · " + gives.capitalize().replace("Gives ", "gives ")

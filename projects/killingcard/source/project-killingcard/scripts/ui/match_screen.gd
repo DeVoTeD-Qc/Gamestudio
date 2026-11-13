@@ -29,6 +29,8 @@
 extends Control
 
 signal ready_pressed
+## kc-r2-fixes: the FAST toggle (column results only) changed.
+signal fast_fights_toggled(on: bool)
 signal menu_pressed
 signal undo_pressed
 ## kc-portrait: the layout switched (rotate / resize); the match state is untouched.
@@ -194,6 +196,8 @@ var _order_strip: Control = null
 var _glow_round: int = -1
 var _last_glow: Array[int] = []
 var _fight_caption: Label = null
+## kc-r2-fixes: FAST beside SPEED (a firefight as its column results only, about 3 s).
+var _fast_button: Button = null
 
 
 func _ready() -> void:
@@ -231,7 +235,7 @@ func _ready() -> void:
 	_fight_caption.name = "FightCaption"
 	_fight_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_fight_caption.add_theme_font_override(&"font", preload("res://assets/fonts/Barlow-Medium.ttf"))
-	_fight_caption.add_theme_font_size_override(&"font_size", 17)
+	_fight_caption.add_theme_font_size_override(&"font_size", 18)  # kc-r2-fixes: >= 12 pt on a phone
 	_fight_caption.add_theme_color_override(&"font_color", Color("#F2F5F7"))
 	_fight_caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_feed_box.add_child(_fight_caption)
@@ -768,7 +772,7 @@ func get_key_controls() -> Dictionary:
 	if tray_state == TRAY_OPEN:
 		out.merge({"hand": _hand, "undo": _undo_button, "ready": _ready_button})
 	else:
-		out.merge({"hand_tab": _hand_tab, "speed": _speed_button})
+		out.merge({"hand_tab": _hand_tab, "speed": _speed_button, "fast": _fast_button})
 		if tray_state == TRAY_PEEK:
 			out["hand"] = _hand
 		else:
@@ -965,7 +969,13 @@ func _layout_tray() -> void:
 	fit_button_text(_ready_button)
 	_layout_dock()
 	_layout_ability()
-	_place(_speed_button, Rect2(0, h - btn_h, w, btn_h))
+	# kc-r2-fixes: SPEED and FAST share the bottom row.
+	var fast_w: float = roundf((w - 6.0) * 0.45)
+	_place(_speed_button, Rect2(0, h - btn_h, w - fast_w - 6.0, btn_h))
+	fit_button_text(_speed_button)
+	if _fast_button != null:
+		_place(_fast_button, Rect2(w - fast_w, h - btn_h, fast_w, btn_h))
+		fit_button_text(_fast_button)
 	var tab_y: float = h - btn_h - 8.0 - tab_h
 	_place(_hand_tab, Rect2(0, tab_y, w, tab_h))
 	var feed_top: float = float(metrics["supply_h"]) + 8.0
@@ -1416,7 +1426,11 @@ func _set_badges(snapshot: Dictionary) -> void:
 	var ready_ks: bool = false
 	for ks: Dictionary in snapshot.get("killstreaks", []):
 		ready_ks = ready_ks or (bool(ks.get("earned", false)) and bool(ks.get("ready", false)))
-	_streak_badge.set_value([[[str(int(snapshot.get("streak", 0))), text_c]]], ready_ks)
+	# kc-r2-fixes (playtest r2: the rail meant nothing; "0" beside READY read as a contradiction): the
+	# badge says STREAK in words; its inspector says an earned killstreak stays ready after a reset.
+	_streak_badge.glyph = &"none"
+	_streak_badge.row_sizes = [13, 22]
+	_streak_badge.set_value([[["STREAK", Color("#9aa5ae")]], [[str(int(snapshot.get("streak", 0))), text_c]]], ready_ks)
 	# kc-ui3: a one-time toast when each killstreak first becomes ready (its tile glows in the tray).
 	if bool(snapshot.get("deploy_open", false)):
 		for ks: Dictionary in snapshot.get("killstreaks", []):
@@ -1466,6 +1480,25 @@ func _setup_tray() -> void:
 		if e is InputEventMouseButton and (e as InputEventMouseButton).pressed:
 			_peek_catcher.accept_event()
 			set_tray_state(TRAY_CLOSED))
+	_fast_button = Button.new()
+	_fast_button.name = "FastButton"
+	_fast_button.toggle_mode = true
+	_fast_button.theme_type_variation = &"HudButton"
+	_fast_button.tooltip_text = "Show each firefight as its column results only"
+	_fast_button.focus_mode = Control.FOCUS_NONE
+	_fast_button.add_to_group(&"tap_target")
+	_speed_button.get_parent().add_child(_fast_button)
+	_fast_button.set_pressed_no_signal(fast_fights())
+	_fast_button.text = "FAST ON" if fast_fights() else "FAST"
+	_fast_button.toggled.connect(func(on: bool) -> void:
+		_fast_button.text = "FAST ON" if on else "FAST"
+		fit_button_text(_fast_button)
+		var st2: Node = get_node_or_null(^"/root/Settings")
+		if st2 != null and "fast_fights" in st2 and bool(st2.get(&"fast_fights")) != on:
+			st2.set_value(&"fast_fights", on)
+		fast_fights_toggled.emit(on))
+	_wire_button_inspect(_fast_button, &"fast")
+	_wire_button_inspect(_speed_button, &"speed")
 	_speed_button.toggled.connect(func(on: bool) -> void:
 		_speed_button.text = "SPEED x2" if on else "SPEED x1"
 		var st: Node = get_node_or_null(^"/root/Settings")
@@ -1501,6 +1534,8 @@ func _follow_phase(snapshot: Dictionary) -> void:
 		_killfeed_fx.clear()
 	if open and int(snapshot.get("round", 1)) != _glow_round:
 		_glow_round = int(snapshot.get("round", 1))
+		if _hand.has_method(&"begin_deploy"):
+			_hand.begin_deploy()  # kc-r2-fixes: the grid re-fits once per Deploy, not after each play
 		glow_set_cards.call_deferred(snapshot.get("hand", []))
 	_deploy_open = open
 	_phase = phase
@@ -1556,6 +1591,8 @@ func _apply_tray_state(animate: bool) -> void:
 	_feed_box.visible = tray_state == TRAY_CLOSED
 	_hand_tab.visible = not open
 	_speed_button.visible = not open
+	if _fast_button != null:
+		_fast_button.visible = not open
 	if _dock != null and not open:
 		_dock.visible = false
 	_peek_catcher.visible = peek
@@ -1601,6 +1638,16 @@ static func default_speed_x2(speed_x2: bool, speed_chosen: bool, tutorial_done: 
 	if FOLLOW_TUTORIAL_DEFAULT:
 		return FirefightResolver.default_playback_speed(tutorial_done) >= 2.0
 	return false
+
+
+## kc-r2-fixes: FAST (Settings.fast_fights): a round plays as its column results only.
+func fast_fights() -> bool:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	return st != null and "fast_fights" in st and bool(st.get(&"fast_fights"))
+
+
+func get_fast_button() -> Button:
+	return _fast_button
 
 
 func playback_speed_x2() -> bool:

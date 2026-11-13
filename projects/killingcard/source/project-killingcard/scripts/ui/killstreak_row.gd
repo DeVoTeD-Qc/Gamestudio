@@ -101,6 +101,12 @@ func word_for(e: Dictionary) -> String:
 	return st if st != "" and st != "CALL IN" else "WAIT"
 
 
+## "DRONE 1/2": the killstreak's short name and the streak toward it.
+static func charge_word(e: Dictionary, current_streak: int) -> String:
+	var t: int = int(e.get("threshold", 0))
+	return "%s %d/%d" % [String(KillstreakFx.look(StringName(e.get("id", &"")))["short"]), mini(current_streak, t), t]
+
+
 func _tooltip(e: Dictionary) -> String:
 	var name_text: String = String(e.get("full_name", e.get("name", "")))
 	if bool(e.get("pending", false)):
@@ -108,7 +114,7 @@ func _tooltip(e: Dictionary) -> String:
 	if is_ready(e):
 		return "%s: ready. Tap to call it in." % name_text
 	if not bool(e.get("earned", false)):
-		return "%s: streak %d of %d." % [name_text, mini(streak, int(e.get("threshold", 0))), int(e.get("threshold", 0))]
+		return "%s: streak %d of %d (eliminations in a row)." % [name_text, mini(streak, int(e.get("threshold", 0))), int(e.get("threshold", 0))]
 	return "%s: %s" % [name_text, String(e.get("reason", ""))]
 
 
@@ -214,9 +220,21 @@ func _draw_tile(tile: Control) -> void:
 	# kc-layout-a: the strip's sockets are short (phone 62x50): a 14 px word and a tighter ring.
 	var fs: int = 16 if tile.size.y >= 60.0 else 14
 	var word: String = word_for(e)
+	# kc-r2-fixes (playtest r2: "0/2, 0/3, 0/5 mean nothing"): a charging tile names its killstreak in
+	# words ("DRONE 1/2") when that fits at 12 px or more; else the count alone.
+	if not bool(e.get("earned", false)) and not bool(e.get("pending", false)):
+		var named: String = charge_word(e, streak)
+		var nfs: int = fs
+		while nfs > 12 and font.get_string_size(named, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x > tile.size.x - 6.0:
+			nfs -= 1
+		if font.get_string_size(named, HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x <= tile.size.x - 6.0:
+			word = named
+			fs = nfs
 	var text_h: float = font.get_height(fs)
 	# Charge ring + icon.
 	var ring_d: float = minf(tile.size.x - 10.0, tile.size.y - text_h - (8.0 if fs == 16 else 4.0))
+	if word != word_for(e):
+		ring_d -= 4.0  # kc-r2-fixes: the named word is wider than the ring; keep it clear of the arc
 	var c: Vector2 = Vector2(tile.size.x * 0.5, (4.0 if fs == 16 else 2.0) + ring_d * 0.5)
 	var thr: int = maxi(1, int(e.get("threshold", 1)))
 	var frac: float = 1.0 if bool(e.get("earned", false)) else clampf(float(streak) / thr, 0.0, 1.0)

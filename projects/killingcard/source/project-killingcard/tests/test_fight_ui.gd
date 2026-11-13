@@ -124,7 +124,7 @@ func test_director_lands_events_in_order_paces_beats_and_shows_pierce() -> void:
 	assert_eq(pips_mid[0], 2, "both first-beat shooters carry a fired pip")
 	assert_false(d.overlay.is_active(), "overlay cleared when the sequence ends")
 	# One plain line per shot (head): who, where, whom, how much, what happened.
-	assert_true(caps.has("Gunner (A) hits Rival Rifleman for 4 — destroyed; Pierce 3 into Rival Point Man"),
+	assert_true(caps.has("Gunner (A) hits Rival Rifleman for 4 — eliminated; Pierce 3 into Rival Point Man"),
 			"shot caption with the kill and the Pierce carry (%s)" % [caps])
 	assert_true(caps.any(func(c: String) -> bool: return c.begins_with("Rival Rifleman (A) hits Gunner for")), "the rival's shot too (%s)" % [caps])
 	assert_true(caps.has("Column A fights: front to back, one shot each."), "column caption")

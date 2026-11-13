@@ -1238,6 +1238,45 @@ func cover_of(u: RulesUnit) -> int:
 			+ passive_total(u, DataEnums.EffectKind.GRANT_COVER) + int(synergy_of(u).get("cover", 0)))
 
 
+## kc-r2-fixes (read-only, for the playback's "why"): what gives u its Cover now, in words
+## ("Bulwark", "its own Cover", "a tactic", "a set bonus"); empty when cover_of(u) is 0.
+func cover_sources(u: RulesUnit) -> PackedStringArray:
+	var out: PackedStringArray = []
+	if u == null or cover_of(u) <= 0:
+		return out
+	if u.cover > 0:
+		out.append("its own Cover")
+	if u.mod_total(DataEnums.EffectKind.GRANT_COVER, round_number) > 0:
+		out.append("a tactic")
+	if u.zone >= 0:
+		for s: RulesSide in sides:
+			var friendly: bool = s.index == u.side
+			for src: RulesUnit in s.units_on_board():
+				for e: EffectData in src.effects:
+					if e != null and e.trigger == DataEnums.Trigger.PASSIVE and e.kind == DataEnums.EffectKind.GRANT_COVER \
+							and EffectResolver.passive_applies(self, e, friendly, src, u, src.zone) and src.card != null:
+						out.append(src.card.display_name)
+			for entry: Dictionary in s.equipment[u.zone]:
+				var fc: CardData = (entry["card"] as RulesCard).card
+				for e: EffectData in fc.effects:
+					if e != null and e.trigger == DataEnums.Trigger.PASSIVE and e.kind == DataEnums.EffectKind.GRANT_COVER \
+							and EffectResolver.field_passive_applies(self, e, s.index, u.zone, u):
+						out.append(fc.display_name)
+			if friendly:
+				for perk: LoadoutItem in s.setup.perks:
+					for e: EffectData in perk.effects:
+						if e != null and e.trigger == DataEnums.Trigger.PASSIVE and e.kind == DataEnums.EffectKind.GRANT_COVER \
+								and EffectResolver.passive_applies(self, e, true, null, u, NO_ZONE):
+							out.append(perk.display_name)
+	if int(synergy_of(u).get("cover", 0)) > 0:
+		out.append("a set bonus")
+	var uniq: PackedStringArray = []
+	for n: String in out:
+		if not n in uniq:
+			uniq.append(n)
+	return uniq
+
+
 ## First Shot now. Blackout-style REMOVE_FIRST_SHOT also removes a set-bonus First Shot (none since kc-specops3).
 ## kc-v2-impl Terrain: Dust Storm takes it away, Rooftops gives it to the side that held the column
 ## at the start of the round.

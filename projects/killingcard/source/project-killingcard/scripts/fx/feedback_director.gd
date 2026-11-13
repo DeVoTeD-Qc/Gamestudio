@@ -101,6 +101,7 @@ signal caption_changed(lines: Array)
 signal fx_started(kind: StringName, node: Object, duration: float)
 
 const FxTiming: GDScript = preload("res://scripts/fx/fx_timing.gd")
+const ScoreRace: GDScript = preload("res://scripts/ui/score_race.gd")
 const FxStyle: GDScript = preload("res://scripts/fx/fx_style.gd")
 const TracerFx: GDScript = preload("res://scripts/fx/tracer_fx.gd")
 const HitMarkerFx: GDScript = preload("res://scripts/fx/hit_marker_fx.gd")
@@ -162,6 +163,12 @@ var fx_log: Array[Dictionary] = []
 var _queue: Array = []
 var _playing: bool = false
 var _skipping: bool = false
+## kc-r2-fixes (playtest r2 FAST): play a sequence as its column results only: everything else is
+## skipped, each column's summary shows for SUMMARY_ONLY_BEAT s (a firefight in about 3 s).
+var summary_only: bool = false
+## A real skip (tap / F) during a summary-only sequence: the column results go too.
+var _hard_skip: bool = false
+const SUMMARY_ONLY_BEAT: float = 0.8
 var _timing: RefCounted = null
 var _wait_tween: Tween = null
 var _shake_tween: Tween = null
@@ -260,7 +267,8 @@ func play(events: Array) -> void:
 		await sequence_finished
 		return
 	_playing = true
-	_skipping = false
+	_skipping = summary_only
+	_hard_skip = false
 	_timing = _make_timing()
 	_hit_count.clear()
 	_tagged_first_shot.clear()
@@ -289,10 +297,11 @@ func play(events: Array) -> void:
 		_qa_note(ev)
 		event_landed.emit(ev)
 		var beat: float = _handle(ev)
-		if beat > 0.0 and not _skipping:
+		if beat > 0.0 and (not _skipping or _summary_beat(ev)):
 			await _wait(beat)
 	_playing = false
 	_skipping = false
+	_hard_skip = false
 	_end_fight()
 	clear_veils()
 	_set_captions([])
@@ -317,6 +326,7 @@ func is_skipping() -> bool:
 ## transient effects (killfeed lines and the streak still update), then finishes.
 func skip() -> void:
 	_skipping = true
+	_hard_skip = true
 	_end_hitstop()
 	_stop_shake()
 	_unlift(true)
@@ -333,6 +343,28 @@ func skip() -> void:
 		streak_arc.finish()
 	if _wait_tween != null and _wait_tween.is_valid():
 		_wait_tween.custom_step(1.0e4)
+
+
+## Summary-only playback (FAST): only the column results wait (until a real skip).
+func _summary_beat(ev: Dictionary) -> bool:
+	return summary_only and not _hard_skip and ev.get("type", &"") == RulesEvent.FIREFIGHT_COLUMN_ENDED
+
+
+## FAST switched on or off. On while a sequence plays: the rest plays as column results only.
+func set_summary_only(on: bool) -> void:
+	summary_only = on
+	if on and _playing and not _skipping:
+		_end_hitstop()
+		_stop_shake()
+		_unlift(true)
+		if overlay != null:
+			overlay.clear()
+		for node: Node in get_tree().get_nodes_in_group(GROUP_TRANSIENT):
+			if is_ancestor_of(node):
+				node.finish()
+		_skipping = true
+		if _wait_tween != null and _wait_tween.is_valid():
+			_wait_tween.custom_step(1.0e4)
 
 
 func clear_log() -> void:
@@ -422,6 +454,8 @@ func _handle(ev: Dictionary) -> float:
 			_tag(int(ev.get("target_uid", -1)), "SUPPRESSED", FxStyle.FOG, ev)
 			return t.get_value(&"popup_beat") * 0.5
 		RulesEvent.SURVIVED_LETHAL:
+			if not _summary.is_empty():
+				_summary["held"] = int(_summary.get("held", 0)) + 1
 			_tag(int(ev.get("uid", -1)), "HOLDS", FxStyle.FOG, ev)
 			return t.get_value(&"popup_beat")
 		RulesEvent.PATCHED:
@@ -494,6 +528,7 @@ func _on_shot(ev: Dictionary, t: RefCounted) -> float:
 	unit_sides[shooter] = side
 	if target >= 0:
 		unit_sides[target] = foe
+	_note_shot(ev)
 	var in_beat: bool = _beat_t0 >= 0.0
 	if overlay != null and not _skipping:
 		overlay.mark_fired(shooter)
@@ -981,21 +1016,53 @@ func _on_column_ended(ev: Dictionary, t: RefCounted) -> float:
 	var zone: StringName = ev.get("zone", _current_zone)
 	if overlay != null:
 		overlay.set_shooters({})
-	if _skipping:
+	var summary_now: bool = summary_only and not _hard_skip
+	if _skipping and not summary_now:
 		return 0.0
-	var kills: int = int(_summary.get("kills", 0))
-	var lost: int = int(_summary.get("lost", 0))
+	var text: String = column_summary_text(_summary, zone)
+	var why: String = no_losses_reason(_summary)
+	var r: Rect2 = _zone_rect(zone)
+	if r.has_area():
+		var was: bool = _skipping
+		_skipping = false  # FAST: the column result is the one thing shown
+		_popup_at(_to_local(r.get_center()), text, &"heading", 18, FxStyle.FOG, ev, &"summary")
+		_skipping = was
+	# kc-r2-fixes (playtest r2 "Column C had no losses and I can't say why"): the log says why.
+	_set_captions([text] if why == "" else [text, why])
+	return SUMMARY_ONLY_BEAT if summary_now else t.get_value(&"fight_summary")
+
+
+## "COLUMN A: 2 KILLS · 1 LOST" / "COLUMN C: NO LOSSES" for one column's summary.
+static func column_summary_text(summary: Dictionary, zone: StringName) -> String:
+	var kills: int = int(summary.get("kills", 0))
+	var lost: int = int(summary.get("lost", 0))
 	var parts: PackedStringArray = []
 	if kills > 0:
 		parts.append("%d %s" % [kills, "KILL" if kills == 1 else "KILLS"])
 	if lost > 0:
 		parts.append("%d LOST" % lost)
-	var text: String = "COLUMN %s: %s" % [ZONE_LETTERS.get(zone, "?"), " · ".join(parts) if not parts.is_empty() else "NO LOSSES"]
-	var r: Rect2 = _zone_rect(zone)
-	if r.has_area():
-		_popup_at(_to_local(r.get_center()), text, &"heading", 18, FxStyle.FOG, ev, &"summary")
-	_set_captions([text])
-	return t.get_value(&"fight_summary")
+	return "COLUMN %s: %s" % [ZONE_LETTERS.get(zone, "?"), " · ".join(parts) if not parts.is_empty() else "NO LOSSES"]
+
+
+## kc-r2-fixes: why a column ended with nobody eliminated (ScoreRace words it for the recap too).
+static func no_losses_reason(summary: Dictionary) -> String:
+	return ScoreRace.no_losses_reason(summary)
+
+
+## Notes one shot in the column summary (for the "no losses" reason). Runs while skipping too.
+func _note_shot(ev: Dictionary) -> void:
+	if _summary.is_empty() or int(ev.get("target_uid", -1)) < 0:
+		return
+	_summary["shots"] = int(_summary.get("shots", 0)) + 1
+	if int(ev.get("damage", 0)) <= 0:
+		_summary["zero"] = int(_summary.get("zero", 0)) + 1
+	var cover: int = int(ev.get("cover", 0))
+	if cover > 0:
+		_summary["covered"] = int(_summary.get("covered", 0)) + 1
+		var from: Dictionary = _summary.get("cover_from", {})
+		for n: Variant in ev.get("cover_from", []):
+			from[String(n)] = true
+		_summary["cover_from"] = from
 
 
 func _set_captions(lines: Array) -> void:
@@ -1051,16 +1118,28 @@ func shot_caption(ev: Dictionary) -> String:
 			held[int(nx.get("uid", -1))] = true
 		elif nt == RulesEvent.PIERCE_CARRIED and int(nx.get("shooter_uid", -1)) == shooter and int(nx.get("damage", 0)) > 0:
 			pierce.append("%d|%d" % [int(nx.get("damage", 0)), int(nx.get("target_uid", -1))])
+	# kc-r2-fixes: a hit softened by Cover names where the Cover comes from (Bulwark, a tactic...).
+	var cov: int = int(ev.get("cover", _slot_entry(target).get("cover", 0)))
+	var cov_from: PackedStringArray = []
+	for n: Variant in ev.get("cover_from", []):
+		if String(n) != "its own Cover":
+			cov_from.append(String(n))
+	var cov_note: String = ("Cover %d from %s" % [cov, " and ".join(cov_from)]) if cov > 0 and not cov_from.is_empty() \
+			else ("Cover %d" % cov if cov > 0 else "")
 	if dmg <= 0:
-		text += " — Cover stops it" if int(_slot_entry(target).get("cover", 0)) > 0 else " — no damage"
+		text += (" — %s stops it" % cov_note) if cov > 0 else " — no damage"
+	elif cov_note != "":
+		text += " (%s)" % cov_note
+	if dmg <= 0:
+		pass
 	elif dead.has(target):
-		text += " — destroyed"
+		text += " — eliminated"
 	elif held.has(target):
 		text += " — it holds (Grit)"
 	for p: String in pierce:
 		var parts: PackedStringArray = p.split("|")
 		var pu: int = int(parts[1])
-		text += "; Pierce %s into %s%s" % [parts[0], _caption_name(pu, _other(side)), " — destroyed" if dead.has(pu) else ""]
+		text += "; Pierce %s into %s%s" % [parts[0], _caption_name(pu, _other(side)), " — eliminated" if dead.has(pu) else ""]
 	return text
 
 

@@ -377,7 +377,15 @@ func _chip_visible_rect(chip: Control) -> Rect2:
 # =============================================================================
 
 func _show_end() -> void:
+	if _ended:
+		return
 	_ended = true
+	# kc-r2-fixes (playtest r2): the last round's playback (the Mortar payoff) plays out first; the
+	# DRILL COMPLETE card comes up once the round has been shown.
+	if controller.is_busy():
+		await controller.round_presented
+	if _coach == null or not is_instance_valid(_coach):
+		return
 	var result: StringName = controller.state.result
 	var line: String = {
 		&"player": "You won the drill.",

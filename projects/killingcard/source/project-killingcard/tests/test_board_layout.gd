@@ -388,7 +388,10 @@ func _check_layout(screen: Dictionary, snapshot: Dictionary = {}, select: String
 		assert_not_null(controller.state, "%s live match started" % label)
 		label += " (live)"
 		if select == &"card" and controller.state != null:
-			controller.select_card(controller.state.sides[0].hand[0].uid)
+			# kc-r2-fixes: an unaffordable card is not left selected, so pay for the first one.
+			var me0: RulesSide = controller.state.sides[0]
+			me0.supply = maxi(me0.supply, me0.hand[0].card.cost)
+			controller.select_card(me0.hand[0].uid)
 		elif select == &"operator":
 			controller.select_operator()
 		if select != &"":

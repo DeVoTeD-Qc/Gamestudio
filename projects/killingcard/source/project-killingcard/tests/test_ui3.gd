@@ -74,7 +74,7 @@ func test_operator_card_deploys_from_the_hand() -> void:
 		await _tap(vp, card.get_global_rect().get_center())
 		assert_eq(c.selection.get("kind"), &"operator", "%s tap selects the Operator" % label)
 		assert_true(hand.operator_selected, "%s the card shows as selected" % label)
-		assert_eq(m.get_board().get_lanes()[1].target_text, "PLACE HERE", "%s columns offer the placement" % label)
+		assert_eq(m.get_board().get_lanes()[1].target_text, "PLAY HERE", "%s columns offer the placement (one term, kc-r2-fixes)" % label)
 		await _tap(vp, (m.get_board().get_lanes()[1].get_node("%FriendlyRow") as Control).get_global_rect().get_center())
 		assert_eq(c.state.projected_operator_zone(0), 1, "%s placed in B" % label)
 		await _frames(2)

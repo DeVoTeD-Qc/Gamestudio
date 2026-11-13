@@ -159,7 +159,21 @@ func _row(row: Dictionary) -> Control:
 	var l: Label = _label(String(row.get("text", "")), ROW_FS, c)
 	l.name = "RowText"
 	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	h.add_child(l)
+	var why: String = String(row.get("why", ""))
+	if why == "":
+		h.add_child(l)
+		return h
+	# kc-r2-fixes (playtest r2 silent effects): a column nobody lost a unit in says why, under its line.
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override(&"separation", 0)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(l)
+	var wl: Label = _label(why, 17, MUTED)
+	wl.name = "RowWhy"
+	wl.theme_type_variation = &""
+	wl.add_theme_font_size_override(&"font_size", 17)
+	v.add_child(wl)
+	h.add_child(v)
 	return h
 
 

@@ -27,6 +27,9 @@ var _codex_button: Button = null
 const SCENE_DUEL_HUB: String = "res://scenes/duel/DuelHub.tscn"
 var _duel_button: Button = null
 var _codex: Control = null
+## kc-r2-fixes (playtest r2: a press where TUTORIAL had been opened the Starting Squad): the column is
+## centred, so hiding the drill offer moved every button. This spacer keeps the offer's room.
+var _offer_reserve: Control = null
 
 var _key_art_scale: float = 0.0
 const TitleWordmark: GDScript = preload("res://scripts/ui/title_wordmark.gd")
@@ -140,6 +143,12 @@ func _build() -> void:
 	_wordmark_art = TitleWordmark.attach(_wordmark)
 	_build_showcase()
 	resized.connect(_fit_showcase)
+	_offer_reserve = Control.new()
+	_offer_reserve.name = "OfferReserve"
+	_offer_reserve.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_column.add_child(_offer_reserve)
+	for c: Control in [_offer_panel, _continue_button, _warning_panel, _confirm_panel]:
+		c.visibility_changed.connect(_sync_offer_reserve)
 	refresh()
 
 
@@ -408,6 +417,18 @@ func open_tutorial() -> void:
 ## True while the first-launch drill offer is on screen.
 func is_offering_tutorial() -> bool:
 	return _offer_panel.visible
+
+
+## Keeps the buttons where they were when the drill offer goes away (no save, no other panel).
+func _sync_offer_reserve() -> void:
+	if _offer_reserve == null:
+		return
+	var others: bool = _offer_panel.visible or _continue_button.visible or _warning_panel.visible or _confirm_panel.visible
+	var h: float = 0.0
+	if not others:
+		h = _offer_panel.get_combined_minimum_size().y
+	_offer_reserve.custom_minimum_size.y = h
+	_offer_reserve.visible = h > 0.0
 
 
 func _on_not_now_pressed() -> void:

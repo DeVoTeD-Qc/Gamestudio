@@ -166,9 +166,11 @@ static func _beat(state, z: int, beat: int, shooters: Array, exchange: int) -> v
 		var src: Dictionary = _source(state, si, u)
 		var dmg: int = maxi(0, state.firepower_of(u) - state.cover_of(target))
 		hits.append([target, dmg, src])
+		# kc-r2-fixes: cover / cover_from are read-only notes for the playback's "why" (no rule change).
 		state.emit_event(RulesEvent.SHOT_FIRED, {"side": state.side_name(si), "shooter_uid": u.uid,
 				"target_uid": target.uid, "zone": state.zone_name(z), "damage": dmg, "step": step, "beat": beat,
-				"overkill": maxi(0, dmg - target.armor), "pierce": state.has_pierce(u)})
+				"overkill": maxi(0, dmg - target.armor), "pierce": state.has_pierce(u),
+				"cover": state.cover_of(target), "cover_from": state.cover_sources(target)})
 		if state.has_pierce(u):  # kc-v2-impl: Breach Point gives Pierce
 			_pierce(state, z, beat, u, src, foe_line, target, dmg - target.armor, hits)
 	for h: Array in hits:
