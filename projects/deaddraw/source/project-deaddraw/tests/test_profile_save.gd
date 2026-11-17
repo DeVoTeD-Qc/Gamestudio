@@ -175,3 +175,30 @@ func test_version_1_save_keeps_unlocks() -> void:
 	back.load_profile()
 	eq(back.best_v1("rosa"), 64, "old record survives a save/load")
 	_cleanup()
+
+
+## dd-ios-save: the profile is mirrored too; a reload whose file lags (IndexedDB not synced) or is gone
+## loads the newer mirror; a broken mirror falls back to the file.
+func test_profile_mirror_survives_a_lagging_file() -> void:
+	var m: DDRunSave.MemoryMirror = DDRunSave.MemoryMirror.new()
+	var p: String = "user://dd_test_profile_m_%d.json" % Time.get_ticks_usec()
+	_paths.append(p)
+	var pr: DDProfile = DDProfile.new(bal(), p, m)
+	pr.mark_hint("weapon")
+	var stale: String = FileAccess.get_file_as_string(p)
+	pr.record_district_clear("maple_row")
+	var f: FileAccess = FileAccess.open(p, FileAccess.WRITE)
+	f.store_string(stale)
+	f.close()
+	var back: DDProfile = DDProfile.new(bal(), p, m)
+	check(back.load_profile(), "loaded")
+	check(back.has_cleared("maple_row"), "the newer mirror wins over the lagging file")
+	DirAccess.remove_absolute(p)
+	var back2: DDProfile = DDProfile.new(bal(), p, m)
+	check(back2.load_profile() and back2.has_cleared("maple_row"), "the mirror alone is enough")
+	m.items[m.items.keys()[0]] = "{broken"
+	pr.save()
+	m.items[m.items.keys()[0]] = "{broken"
+	var back3: DDProfile = DDProfile.new(bal(), p, m)
+	check(back3.load_profile() and back3.has_cleared("maple_row"), "a broken mirror falls back to the file")
+	_cleanup()

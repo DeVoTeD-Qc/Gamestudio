@@ -3654,6 +3654,33 @@ func _publish_state() -> void:
 	st["drag_hover"] = drag.hovered if drag != null else ""
 	var csc: Node = codex.find_child("Scroll", true, false) if codex.is_open() else null
 	st["codex_scroll"] = (csc as ScrollContainer).scroll_vertical if csc is ScrollContainer else -1
+	# dd-ios-save: which stores took the last run save (file / mirror, and localStorage / sessionStorage)
+	st["store"] = Game.run_save.last_write if Game.run_save != null else {}
+	# dd-ios-mem: texture / video memory (MB) and live objects, for the browser memory soak
+	st["mem"] = {"tex": snappedf(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0, 0.1),
+		"video": snappedf(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0, 0.1),
+		"objects": int(Performance.get_monitor(Performance.OBJECT_COUNT)), "resources": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT))}
+	if bool(JavaScriptBridge.eval("!!window.ddMemDebug", true)):
+		var tl: Array = []
+		for d: Dictionary in [Art.loaded(), DDUi.Kit._tex]:
+			for k: Variant in d.keys():
+				var tx: Texture2D = d[k]
+				if tx != null:
+					tl.append("%s %dx%d" % [str(k).get_file(), tx.get_width(), tx.get_height()])
+		st["texlist"] = tl
+		var fonts: Array = []
+		var ts: TextServer = TextServerManager.get_primary_interface()
+		var f: Font = ThemeDB.fallback_font
+		for rid: RID in f.get_rids():
+			var tot: int = 0
+			var sizes: Array = ts.font_get_size_cache_list(rid)
+			for sz: Vector2i in sizes:
+				for ti: int in ts.font_get_texture_count(rid, sz):
+					var im: Image = ts.font_get_texture_image(rid, sz, ti)
+					if im != null:
+						tot += im.get_data_size()
+			fonts.append({"name": ts.font_get_name(rid), "sizes": sizes.size(), "bytes": tot, "list": str(sizes).left(400)})
+		st["fonts"] = fonts
 	JavaScriptBridge.eval("window.ddState = " + JSON.stringify(st) + ";", true)
 
 

@@ -37,6 +37,7 @@ var discarded_old_run: bool = false
 
 
 func _ready() -> void:
+	_setup_font()
 	bal = DDBalance.get_default()
 	profile = DDProfile.new(bal)
 	profile.load_profile()
@@ -47,6 +48,22 @@ func _ready() -> void:
 	apply_settings()
 	DDUi.Kit.set_skin(str(profile.setting("ui_skin")))
 	_hook_page_hide()
+
+
+# ---------------------------------------------------------------- font memory (dd-ios-mem)
+## The game's one font (the engine default) draws as a multichannel signed distance field
+## (project.godot gui/theme/default_font_multichannel_signed_distance_field): one glyph atlas for every
+## size, outline and screen scale. With plain bitmap glyphs every (size x outline x screen scale) had
+## its own atlas pages, kept twice (CPU image + GPU texture): ~70 MB after a few minutes of play and
+## growing - the largest part of the memory iOS killed the tab for. The pixel range must be at least
+## twice the widest outline at the 48 px source size (the big zoom number: outline 14 at size 64).
+const FONT_MSDF_RANGE: int = 24
+
+
+func _setup_font() -> void:
+	var ff: FontFile = ThemeDB.fallback_font as FontFile
+	if ff != null and ff.multichannel_signed_distance_field and ff.msdf_pixel_range < FONT_MSDF_RANGE:
+		ff.msdf_pixel_range = FONT_MSDF_RANGE
 
 
 # ---------------------------------------------------------------- save on leave (dd-save-fix)
@@ -66,6 +83,8 @@ func _hook_page_hide() -> void:
 		win.addEventListener("beforeunload", _js_page_hide)
 	if doc != null:
 		doc.addEventListener("visibilitychange", _js_page_hide)
+		# dd-ios-save: a background tab Safari freezes (and may then discard) gets one last write too
+		doc.addEventListener("freeze", _js_page_hide)
 
 
 func _on_page_hide(_args: Array) -> void:

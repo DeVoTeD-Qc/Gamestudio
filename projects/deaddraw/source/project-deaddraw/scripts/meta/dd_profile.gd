@@ -16,7 +16,10 @@
 #   v2 (save version 2): DeadDraw v2 scores are points (x10 on screen), so a version-1 save keeps
 #   every clear, unlock, badge, run count and setting, but its best scores move to "best_v1"
 #   (shown as the old record) and v2 bests start fresh.
-# Dependencies: DDBalance.
+#   dd-ios-save: like the run save, the profile is also written to a synchronous mirror (localStorage +
+#   sessionStorage on the Web, see DDRunSave.WebStorage) with a saved_at stamp; loading takes the newest
+#   copy that parses, so unlocks and settings survive a tab that is killed before IndexedDB syncs.
+# Dependencies: DDBalance, DDRunSave (its WebStorage mirror).
 # Author: Mechanics Developer Agent
 class_name DDProfile
 extends RefCounted
@@ -30,11 +33,16 @@ const SETTING_DEFAULTS: Dictionary = {"master_volume": 0.8, "sfx_volume": 0.8, "
 var path: String = DEFAULT_PATH
 var bal: DDBalance
 var data: Dictionary = {}
+## dd-ios-save: synchronous second copy (null = file only). Web: DDRunSave.WebStorage; tests: MemoryMirror.
+var mirror: RefCounted = null
 
 
-func _init(balance: DDBalance = null, save_path: String = DEFAULT_PATH) -> void:
+func _init(balance: DDBalance = null, save_path: String = DEFAULT_PATH, save_mirror: RefCounted = null) -> void:
 	bal = balance if balance != null else DDBalance.get_default()
 	path = save_path
+	mirror = save_mirror
+	if mirror == null and OS.has_feature("web"):
+		mirror = DDRunSave.WebStorage.new()
 	reset()
 
 
@@ -45,9 +53,15 @@ func reset() -> void:
 
 func load_profile() -> bool:
 	reset()
-	if not FileAccess.file_exists(path):
+	var texts: Array = []
+	if FileAccess.file_exists(path):
+		texts.append(FileAccess.get_file_as_string(path))
+	if mirror != null:
+		texts.append_array(mirror.get_items("deaddraw:" + path) if mirror.has_method("get_items") else [mirror.get_item("deaddraw:" + path)])
+	var text: String = DDRunSave.newest_text(texts)
+	if text == "":
 		return false
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var parsed: Variant = JSON.parse_string(text)
 	if not parsed is Dictionary:
 		return false
 	var from_version: int = int((parsed as Dictionary).get("version", 1))
@@ -111,11 +125,14 @@ func _put_setting(key: String, value: Variant) -> void:
 
 
 func save() -> bool:
+	var out: Dictionary = data.duplicate()
+	out["saved_at"] = Time.get_unix_time_from_system()
+	var ok_m: bool = mirror != null and bool(mirror.set_item("deaddraw:" + path, JSON.stringify(out)))
 	var f: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		push_warning("DDProfile: cannot write %s" % path)
-		return false
-	f.store_string(JSON.stringify(data, "  "))
+		return ok_m
+	f.store_string(JSON.stringify(out, "  "))
 	f.close()
 	return true
 

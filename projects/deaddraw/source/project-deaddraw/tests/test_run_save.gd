@@ -428,3 +428,102 @@ func test_mirror_keeps_the_run_when_the_file_lags() -> void:
 	sv.save(r, "MAP")
 	eq(str(sv.load_run(bal()).get("screen", "")), "MAP", "saved again after a clear")
 	_cleanup()
+
+
+# ---------------------------------------------------------------- dd-ios-save
+## A newer copy that is corrupt or does not load never hides an older good one, and nothing is deleted.
+func test_a_broken_newer_copy_falls_back_to_the_good_one() -> void:
+	var m: DDRunSave.MemoryMirror = DDRunSave.MemoryMirror.new()
+	var sv: DDRunSave = _save()
+	sv.mirror = m
+	var r: DDRun = make_run("rosa")
+	_play(r, _rng(9), 5)
+	check(sv.save(r, "STREET"), "saved")
+	var good: String = JSON.stringify(r.to_dict())
+	var later: float = Time.get_unix_time_from_system() + 60.0
+	for bad: String in ["{not json", JSON.stringify({"version": DDRunSave.VERSION, "saved_at": later, "screen": "STREET", "run": {"v": 4, "junk": true}}),
+			JSON.stringify({"version": DDRunSave.VERSION, "saved_at": later, "screen": "STREET", "run": "nope"})]:
+		var f: FileAccess = FileAccess.open(sv.path, FileAccess.WRITE)
+		f.store_string(bad)
+		f.close()
+		var back: Dictionary = DDRunSave.new(sv.path, m).load_run(bal())
+		check(not back.is_empty(), "still resumable with a broken newer file: " + bad.left(30))
+		if not back.is_empty():
+			eq(JSON.stringify((back["run"] as DDRun).to_dict()), good, "the good copy is used")
+		DDRunSave.new(sv.path, m).discard_old()
+		eq(FileAccess.get_file_as_string(sv.path), bad, "the unreadable file is left alone (no clear on a load error)")
+	# the other way round: a broken mirror, a good file
+	var f2: FileAccess = FileAccess.open(sv.path, FileAccess.WRITE)
+	f2.store_string(JSON.stringify({"version": DDRunSave.VERSION, "saved_at": 1.0, "screen": "MAP", "run": r.to_dict()}))
+	f2.close()
+	m.items[m.items.keys()[0]] = "{broken"
+	eq(str(DDRunSave.new(sv.path, m).load_run(bal()).get("screen", "")), "MAP", "a broken mirror falls back to the file")
+	_cleanup()
+
+
+## A store that refuses writes (blocked localStorage, an unwritable user://) does not lose the run.
+func test_a_store_that_refuses_writes() -> void:
+	var r: DDRun = make_run("imani")
+	_play(r, _rng(4), 6)
+	# mirror refuses: the file has it
+	var m: DDRunSave.MemoryMirror = DDRunSave.MemoryMirror.new()
+	m.writable = false
+	var sv: DDRunSave = _save()
+	sv.mirror = m
+	check(sv.save(r, "STREET"), "saved to the file")
+	eq(sv.last_write, {"file": true, "mirror": false}, "last_write says the file took it")
+	check(not sv.load_run(bal()).is_empty(), "resumable from the file")
+	# the file cannot be written (no such folder): the mirror has it, verified by reading back
+	var m2: DDRunSave.MemoryMirror = DDRunSave.MemoryMirror.new()
+	var sv2: DDRunSave = DDRunSave.new("user://dd_no_such_dir_%d/run.json" % Time.get_ticks_usec(), m2)
+	check(sv2.save(r, "STREET"), "saved to the mirror")
+	eq(sv2.last_write, {"file": false, "mirror": true}, "last_write says the mirror took it")
+	var back: Dictionary = DDRunSave.new(sv2.path, m2).load_run(bal())
+	check(not back.is_empty(), "resumable from the mirror alone")
+	# nothing takes it: save() says so
+	var m3: DDRunSave.MemoryMirror = DDRunSave.MemoryMirror.new()
+	m3.writable = false
+	check(not DDRunSave.new(sv2.path, m3).save(r, "STREET"), "no store: save() is false")
+	_cleanup()
+
+
+## The crash-reload case: after every single action the run is saved; a fresh reader (the reloaded page)
+## whose file is one save behind (IndexedDB not synced yet) still resumes the exact latest state. Over
+## several seeds and whole runs this also proves every state the rules reach round-trips through a save.
+func test_every_action_survives_a_crash_reload() -> void:
+	var checked: int = 0
+	for seed_value: int in [1, 2, 3, 5, 8]:
+		var m: DDRunSave.MemoryMirror = DDRunSave.MemoryMirror.new()
+		var sv: DDRunSave = _save()
+		sv.mirror = m
+		var r: DDRun = make_run(["rosa", "imani", "theo"][seed_value % 3])
+		var rng: RandomNumberGenerator = _rng(seed_value * 31)
+		var prev: String = ""
+		for k: int in 220:
+			if r.phase != DDRun.Phase.STREET and r.phase != DDRun.Phase.SAFEHOUSE:
+				break
+			if _play(r, rng, 1).is_empty() and r.phase == DDRun.Phase.STREET:
+				break
+			if not sv.save(r, "SAFEHOUSE" if r.phase == DDRun.Phase.SAFEHOUSE else "STREET"):
+				check(r.phase == DDRun.Phase.DEAD or r.phase == DDRun.Phase.WON, "only a finished run is not saved")
+				break
+			var now: String = FileAccess.get_file_as_string(sv.path)
+			if prev != "":
+				# the reload sees the file one save behind
+				var f: FileAccess = FileAccess.open(sv.path, FileAccess.WRITE)
+				f.store_string(prev)
+				f.close()
+			var back: Dictionary = DDRunSave.new(sv.path, m).load_run(bal())
+			if back.is_empty():
+				check(false, "seed %d action %d: no Continue after a crash-reload" % [seed_value, k])
+				break
+			if JSON.stringify((back["run"] as DDRun).to_dict()) != JSON.stringify(r.to_dict()):
+				check(false, "seed %d action %d: resumed state differs" % [seed_value, k])
+				break
+			checked += 1
+			var f2: FileAccess = FileAccess.open(sv.path, FileAccess.WRITE)
+			f2.store_string(now)
+			f2.close()
+			prev = now
+	check(checked > 200, "checked %d saved states" % checked)
+	_cleanup()

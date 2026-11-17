@@ -27,6 +27,12 @@
 #   the tier painting as the fallback) and layered weapon cards: the manifest's "layers" group,
 #   {painting: {"back": file, "cut": file, "box": [...], "anchor": [x, y]}}, makes _texture() hand out a
 #   DDLayeredTexture (backdrop + cut-out) in that painting's place; a missing layer keeps the painting.
+#   dd-ios-mem (iPhone / iPad tab reloads = WebKit killing the tab for memory): the texture cache no
+#   longer keeps every painting it ever handed out. A painting stays loaded while a node on screen
+#   uses it (a weak reference finds it again) plus the most recently used ones up to keep_bytes
+#   (strong references, so a rebuilt screen or a reopened zoom does not decode it again); the rest are
+#   freed (GPU memory back) and decode again when next needed. Before, a long session ended up with
+#   every painting in GPU memory (~150 MB of RGBA).
 # Dependencies: DDCard, DDText.
 # Author: Game Feel Engineer Agent (dd-feel)
 extends RefCounted
@@ -41,7 +47,13 @@ const LayeredTex: GDScript = preload("res://scripts/ui/dd_layered_texture.gd")
 static var _path: String = DEFAULT_MANIFEST
 static var _entries: Dictionary = {}   # lowercase key -> resolved file path
 static var _loaded: bool = false
-static var _tex: Dictionary = {}       # file path -> Texture2D (or null)
+static var _tex: Dictionary = {}       # file path -> WeakRef to a Texture2D, or MISSING (no art)
+static var _recent: Array[String] = []  # most recently used last; their textures are held in _held
+static var _held: Dictionary = {}      # file path -> Texture2D (the strong, recently used set)
+static var _held_bytes: int = 0
+## Recently used paintings kept loaded even when nothing shows them (bytes as w * h * 4).
+static var keep_bytes: int = 24 * 1024 * 1024
+const MISSING: String = "-"
 static var _focus: Dictionary = {}     # file path -> {"box": Rect2, "focus": Vector2}
 static var _layers: Dictionary = {}    # painting path -> {"back": path, "cut": path, "box": Rect2, "anchor": Vector2}
 ## dd-art-import45: false draws the pack 1 weapon paintings instead of the layers (before / after sheets).
@@ -60,10 +72,20 @@ static func set_layers(on: bool) -> void:
 	reset()
 
 
+## dd-ios-mem: the recently used budget (tests set a small one). Returns the old value.
+static func set_keep_bytes(n: int) -> int:
+	var old: int = keep_bytes
+	keep_bytes = n
+	return old
+
+
 static func reset() -> void:
 	_entries = {}
 	_loaded = false
 	_tex = {}
+	_recent = []
+	_held = {}
+	_held_bytes = 0
 	_focus = {}
 	_layers = {}
 
@@ -103,7 +125,7 @@ static func focus_for(tex: Texture2D) -> Dictionary:
 	if tex.resource_path != "" and _focus.has(tex.resource_path):
 		return _focus[tex.resource_path]
 	for p: Variant in _tex.keys():
-		if _tex[p] == tex:
+		if _cached(str(p)) == tex:
 			return _focus.get(p, {})
 	return {}
 
@@ -399,7 +421,11 @@ static func _exists(p: String) -> bool:
 ## Imported texture when there is one, else rasterise the raw SVG / image file. Cached.
 static func _texture(path: String) -> Texture2D:
 	if _tex.has(path):
-		return _tex[path]
+		if _tex[path] is String:
+			return null
+		var c: Texture2D = _cached(path)
+		if c != null:
+			return _use(path, c)
 	var t: Texture2D = null
 	if layers_enabled and _layers.has(path):
 		# dd-art-import45: the backdrop + cut-out in the painting's place (both layers or neither)
@@ -411,8 +437,7 @@ static func _texture(path: String) -> Texture2D:
 			t.set("box", ls.get("box", t.get("box")))
 			t.set("anchor", ls.get("anchor", t.get("anchor")))
 			t.set("own_box", ls.get("own", Rect2()))
-			_tex[path] = t
-			return t
+			return _store(path, t)
 	if path.begins_with("res://") and ResourceLoader.exists(path):
 		t = load(path) as Texture2D
 	if t == null and FileAccess.file_exists(path):
@@ -430,16 +455,76 @@ static func _texture(path: String) -> Texture2D:
 			err = img.load(path)
 		if err == OK and not img.is_empty():
 			t = ImageTexture.create_from_image(img)
-	_tex[path] = t
-	return t
+	return _store(path, t)
 
 
 ## A layer file (backdrop or cut-out): the imported texture, cached under its own path.
 static func _plain_texture(path: String) -> Texture2D:
 	if _tex.has(path):
-		return _tex[path]
+		if _tex[path] is String:
+			return null
+		var c: Texture2D = _cached(path)
+		if c != null:
+			return c
 	var t: Texture2D = null
 	if path.begins_with("res://") and ResourceLoader.exists(path):
 		t = load(path) as Texture2D
-	_tex[path] = t
+	# a layer is kept alive by the layered cards that use it (they are in the recently used set)
+	_tex[path] = weakref(t) if t != null else MISSING
 	return t
+
+
+# ---------------------------------------------------------------- cache (dd-ios-mem)
+## The cached texture for a path while it is still alive (null when freed, missing or never loaded).
+static func _cached(path: String) -> Texture2D:
+	var e: Variant = _tex.get(path, null)
+	if e is WeakRef:
+		return (e as WeakRef).get_ref() as Texture2D
+	return null
+
+
+static func _store(path: String, t: Texture2D) -> Texture2D:
+	if t == null:
+		_tex[path] = MISSING
+		return null
+	_tex[path] = weakref(t)
+	return _use(path, t)
+
+
+## Marks a texture as just used: it joins the recently used set, the oldest ones beyond keep_bytes leave.
+static func _use(path: String, t: Texture2D) -> Texture2D:
+	var i: int = _recent.find(path)
+	if i >= 0:
+		_recent.remove_at(i)
+	else:
+		_held[path] = t
+		_held_bytes += _bytes(t)
+	_recent.append(path)
+	while _held_bytes > keep_bytes and _recent.size() > 1:
+		var old: String = _recent.pop_front()
+		var ot: Texture2D = _held.get(old, null)
+		_held.erase(old)
+		if ot != null:
+			_held_bytes -= _bytes(ot)
+	return t
+
+
+## GPU bytes of a texture (a layered card: its two layers).
+static func _bytes(t: Texture2D) -> int:
+	if t.get_script() == LayeredTex:
+		var n: int = 0
+		for l: Variant in [t.get("back"), t.get("cut")]:
+			if l is Texture2D:
+				n += (l as Texture2D).get_width() * (l as Texture2D).get_height() * 4
+		return n
+	return t.get_width() * t.get_height() * 4
+
+
+## Textures loaded right now (alive), for tests and the memory soak: path -> Texture2D.
+static func loaded() -> Dictionary:
+	var out: Dictionary = {}
+	for p: Variant in _tex.keys():
+		var t: Texture2D = _cached(str(p))
+		if t != null:
+			out[p] = t
+	return out
