@@ -935,20 +935,47 @@ func open_arts(e: Dictionary) -> void:
 	_art_back.grab_focus.call_deferred()
 
 
+## kc-codex-mem: closing the ART panel changes nothing in the grid (the Codex is a viewer), so the
+## grid is not rebuilt (a rebuild holds the old and the new ~60 cards at once: a ~20 MB peak, and the
+## wasm heap never shrinks). The panel's own cards are freed, and the grid keeps its scroll position.
 func close_arts() -> void:
 	_art_panel.visible = false
 	art_entry = {}
-	refresh()
+	for holder: Node in [_art_grid, _art_preview_holder]:
+		for c: Node in holder.get_children():
+			holder.remove_child(c)
+			c.queue_free()
 
 
-## Previews `art` (one of the open card's arts).
+## Previews `art` (one of the open card's arts). kc-codex-mem: only the preview and the two tiles
+## whose mark changes are rebuilt, not every art tile.
 func select_art(art: StringName) -> void:
-	if art in art_ids:
-		selected_art = art
+	if not art in art_ids:
+		return
+	var was: StringName = selected_art
+	selected_art = art
+	if was == art or was not in art_ids or _art_grid.get_child_count() != art_ids.size():
 		_fill_art_panel()
+		return
+	_fill_art_panel(false)
+	for a: StringName in [was, art]:
+		_replace_art_tile(a)
 
 
-func _fill_art_panel() -> void:
+func _replace_art_tile(art: StringName) -> void:
+	var i: int = art_ids.find(art)
+	var old: Control = _art_grid.get_child(i) as Control
+	var focused: bool = old.has_focus()
+	var tile: Control = _make_art_tile(art, false, art == selected_art)
+	_art_grid.remove_child(old)
+	old.queue_free()
+	_art_grid.add_child(tile)
+	_art_grid.move_child(tile, i)
+	if focused:
+		tile.grab_focus()
+
+
+func _fill_art_panel(tiles: bool = true) -> void:
 	if art_entry.is_empty():
 		return
 	var card: CardData = art_entry.get("card") as CardData
@@ -985,11 +1012,12 @@ func _fill_art_panel() -> void:
 		_art_trait.text = "Trait: printed (%s), whatever it wears. The art is its look." % ArtTraits.trait_name(card.card_trait)
 	else:
 		_art_trait.text = "Same card, same rules: the art is its look."
-	for c: Node in _art_grid.get_children():
-		_art_grid.remove_child(c)
-		c.queue_free()
-	for art: StringName in art_ids:
-		_art_grid.add_child(_make_art_tile(art, false, art == selected_art))
+	if tiles:
+		for c: Node in _art_grid.get_children():
+			_art_grid.remove_child(c)
+			c.queue_free()
+		for art: StringName in art_ids:
+			_art_grid.add_child(_make_art_tile(art, false, art == selected_art))
 	_layout_art_panel()
 
 

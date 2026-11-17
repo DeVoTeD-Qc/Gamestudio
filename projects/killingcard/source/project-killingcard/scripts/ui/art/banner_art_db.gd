@@ -27,6 +27,8 @@
 #   kc-ios-mem: the caches no longer grow for the whole session (iOS kills a tab that holds too much):
 #   trim() (SceneRouter calls it after every scene change and every few seconds) drops the arts no
 #   node shows any more, keeping only the most recently used ones up to a small budget.
+#   kc-codex-mem: the generated alternate arts (VARIANTS, the trait option looks) are cut from the
+#   source decoded on the CPU (no GPU readback) and hold only their 4:1 band (_band_image).
 # Dependencies: BannerArt (scripts/data/banner_art.gd), CardArt (scripts/ui/art/card_art.gd).
 # Author: Mechanics Developer Agent (kc-board)
 class_name BannerArtDB
@@ -376,6 +378,7 @@ static func _licensed_art(art_id: StringName) -> BannerArt:
 		art.tags = {"trait": String(row["trait"])}
 	art.mastery_tier = int(row.get("tier_rank", "0")) if String(row.get("tier_rank", "")).is_valid_int() else 0
 	art.licence = "Activision. NOT LICENSED: private pitch prototype only, never ship or publish."
+	art.set_meta(&"source_path", path)  # kc-codex-mem: variants decode it again, no GPU readback
 	art.source_note = "Licensed reference art (private pitch build): " + path.get_file()
 	return art
 
@@ -388,6 +391,12 @@ static func _load_image(path: String) -> Texture2D:
 		var res: Resource = load(path)
 		if res is Texture2D:
 			return res
+	var img: Image = _decode_file(path)
+	return ImageTexture.create_from_image(img) if img != null else null
+
+
+## The raw PNG / JPG / WebP bytes of a file decoded on the CPU (null when missing or unreadable).
+static func _decode_file(path: String) -> Image:
 	if not FileAccess.file_exists(path):
 		return null
 	var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
@@ -400,7 +409,7 @@ static func _load_image(path: String) -> Texture2D:
 		err = img.load_png_from_buffer(bytes)
 	elif bytes.size() >= 3 and bytes[0] == 0xFF and bytes[1] == 0xD8:
 		err = img.load_jpg_from_buffer(bytes)
-	return ImageTexture.create_from_image(img) if err == OK and not img.is_empty() else null
+	return img if err == OK and not img.is_empty() else null
 
 
 ## True when the art is the head's banner (data/banners), not a placeholder.
@@ -530,7 +539,6 @@ static func _option_variant(art_id: StringName, hint: Dictionary) -> BannerArt:
 		return null
 	var spec: Array = ArtTraits.OPTION_VARIANTS[fam]
 	var base: BannerArt = get_art(StringName(parts[0]), hint)
-	var tex: Texture2D = master_texture(base)
 	var art := BannerArt.new()
 	art.id = art_id
 	art.card_id = base.card_id
@@ -541,23 +549,14 @@ static func _option_variant(art_id: StringName, hint: Dictionary) -> BannerArt:
 	art.portrait_x = base.portrait_x
 	art.tags = {"family": String(fam), "emblem": String(spec[2])}
 	art.source_note = "Placeholder option art (%s, %s family): the chassis art with the family tint and emblem." % [spec[0], ArtTraits.FAMILY_NAMES[fam]]
-	if tex == null:
+	# kc-codex-mem: only the 4:1 band, cut from the decoded source (no GPU readback, no full-size copies).
+	var img: Image = _band_image(base, hint)
+	if img == null:
+		art.texture = master_texture(base)
 		return art
-	var img: Image = tex.get_image()
-	if img == null or img.is_empty():
-		art.texture = tex
-		return art
-	img = img.duplicate()
-	if img.is_compressed():
-		img.decompress()
-	img.convert(Image.FORMAT_RGBA8)
-	var tint: Color = spec[1]
 	img.adjust_bcs(0.92, 1.06, 0.85)
-	if tint.a > 0.0:
-		var over: Image = Image.create(img.get_width(), img.get_height(), false, Image.FORMAT_RGBA8)
-		over.fill(tint)
-		img.blend_rect(over, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i.ZERO)
-	var band: Rect2i = Rect2i(art.banner_region(Vector2(img.get_size())))
+	_tint(img, spec[1])
+	var band: Rect2i = Rect2i(Vector2i.ZERO, img.get_size())
 	_family_treatment(img, band, fam)
 	var es: int = maxi(16, int(band.size.y * 0.44))
 	var emblem: Image = option_emblem(StringName(String(spec[2])), es)
@@ -565,6 +564,72 @@ static func _option_variant(art_id: StringName, hint: Dictionary) -> BannerArt:
 			Vector2i(band.position.x + int(band.size.x * 0.64) - es / 2, band.position.y + (band.size.y - es) / 2))
 	art.texture = ImageTexture.create_from_image(img)
 	return art
+
+
+## kc-codex-mem: a generated alternate art (_variant / _option_variant) only ever shows as the 4:1
+## banner (the board, the cards, the Codex, the inspector all use banner_texture), so its master is
+## that band alone, at the source's full width (no quality loss): 1152x288 = 1.3 MB instead of the
+## whole 1152x768 master (3.4 MB). It is cut from the source decoded on the CPU, never read back
+## from the GPU, so making one costs the decoded source plus the band, not 3-4 full-size copies
+## (the wasm heap only grows: every peak stays). A band master's portrait_region is its own 2:3
+## column (nothing shows a variant's portrait). Its texture counts in trim()'s budget like any art.
+## Null when the base has no image at all (then the caller keeps the base texture as is).
+static func _band_image(base: BannerArt, hint: Dictionary, centre_y: float = -1.0) -> Image:
+	var src: Image = _source_image(base, hint)
+	if src == null or src.is_empty():
+		return null
+	var band: Rect2i = Rect2i(BannerArt.band_rect(Vector2(src.get_size()), base.banner_y if centre_y < 0.0 else centre_y))
+	var img: Image = src.get_region(band)
+	src = null  # the full-size source goes before anything else is allocated
+	if img.get_format() != Image.FORMAT_RGBA8:
+		img.convert(Image.FORMAT_RGBA8)
+	return img
+
+
+## The base art's master as a CPU image, decoded from its file: data/banners and kit WebPs
+## (image_path), the Killstreak card art of a placeholder, or the generated gradient. Null when
+## nothing can be read (no texture at all).
+static func _source_image(base: BannerArt, hint: Dictionary) -> Image:
+	var path: String = base.image_path
+	if base.licensed:
+		path = String(base.get_meta(&"source_path", ""))
+	elif path == "" and base.placeholder and base.card_id != &"" and CardArt.has_card(base.card_id):
+		path = CardArt.card_path(base.card_id)
+	if path != "" and (base.licensed or CardArt.has_bitmap(path)) and _ships_raw(path):
+		var img: Image = _decode_file(path)
+		if img != null:
+			return img
+	if base.placeholder and base.source_note.begins_with("Placeholder: generated"):
+		return _generated_image(base.card_id, hint)
+	# Last resort (an imported texture resource, e.g. a kit piece): read it back once. No card art
+	# in the public or the pitch build takes this path today.
+	var tex: Texture2D = master_texture(base)
+	var img: Image = tex.get_image() if tex != null else null
+	if img != null and img.is_compressed():
+		img.decompress()
+	return img
+
+
+## True when the file ships as its own bytes (no import, or the "keep" importer): it can be decoded.
+static func _ships_raw(path: String) -> bool:
+	return not FileAccess.file_exists(path + ".import") or FileAccess.get_file_as_string(path + ".import").contains('importer="keep"')
+
+
+## Blends a flat tint (alpha = strength) over an opaque RGBA8 image, in place. One reused strip
+## (TINT_STRIP rows) instead of a full-size overlay image.
+const TINT_STRIP: int = 16
+static var _tint_strip: Image = null
+
+
+static func _tint(img: Image, tint: Color) -> void:
+	if tint.a <= 0.0:
+		return
+	var w: int = img.get_width()
+	if _tint_strip == null or _tint_strip.get_width() < w:
+		_tint_strip = Image.create(w, TINT_STRIP, false, Image.FORMAT_RGBA8)
+	_tint_strip.fill(tint)
+	for y: int in range(0, img.get_height(), TINT_STRIP):
+		img.blend_rect(_tint_strip, Rect2i(0, 0, w, mini(TINT_STRIP, img.get_height() - y)), Vector2i(0, y))
 
 
 ## The family's treatment across the 4:1 band of `img` (in place).
@@ -678,7 +743,6 @@ static func _variant(art_id: StringName, hint: Dictionary) -> BannerArt:
 	if spec.is_empty():
 		return null
 	var base: BannerArt = get_art(StringName(parts[0]), hint)
-	var tex: Texture2D = master_texture(base)
 	var art := BannerArt.new()
 	art.id = art_id
 	art.card_id = base.card_id
@@ -688,22 +752,13 @@ static func _variant(art_id: StringName, hint: Dictionary) -> BannerArt:
 	art.banner_y = clampf(base.banner_y + float(spec[5]), 0.1, 0.9)
 	art.portrait_x = clampf(1.0 - base.portrait_x if bool(spec[6]) else base.portrait_x, 0.0, 1.0)
 	art.source_note = "Placeholder alternate art (%s): the chassis art regraded." % spec[1]
-	if tex == null:
+	# kc-codex-mem: only the 4:1 band (re-centred at banner_y), cut from the decoded source.
+	var img: Image = _band_image(base, hint, art.banner_y)
+	if img == null:
+		art.texture = master_texture(base)
 		return art
-	var img: Image = tex.get_image()
-	if img == null or img.is_empty():
-		art.texture = tex
-		return art
-	img = img.duplicate()
-	if img.is_compressed():
-		img.decompress()
-	img.convert(Image.FORMAT_RGBA8)
 	img.adjust_bcs(float(spec[3]), 1.08, float(spec[4]))
-	var tint: Color = spec[2]
-	if tint.a > 0.0:
-		var over: Image = Image.create(img.get_width(), img.get_height(), false, Image.FORMAT_RGBA8)
-		over.fill(tint)
-		img.blend_rect(over, Rect2i(Vector2i.ZERO, img.get_size()), Vector2i.ZERO)
+	_tint(img, spec[2])
 	if bool(spec[6]):
 		img.flip_x()
 	art.texture = ImageTexture.create_from_image(img)
@@ -735,6 +790,10 @@ static func _placeholder(art_id: StringName, hint: Dictionary) -> BannerArt:
 
 ## A 3:2 gradient with a dark class silhouette, its hue taken from the art id.
 static func _generated(art_id: StringName, hint: Dictionary) -> Texture2D:
+	return ImageTexture.create_from_image(_generated_image(art_id, hint))
+
+
+static func _generated_image(art_id: StringName, hint: Dictionary) -> Image:
 	var h: int = absi(hash(String(art_id)))
 	var hue: float = float(h % 360) / 360.0
 	var top: Color = Color.from_hsv(hue, 0.55, 0.42)
@@ -770,7 +829,7 @@ static func _generated(art_id: StringName, hint: Dictionary) -> Texture2D:
 				fig.set_pixel(x, y, Color(ink, a))
 		var at: Vector2i = Vector2i((GEN_SIZE.x - fig.get_width()) / 2, int(GEN_SIZE.y * 0.62) - fig.get_height() / 2)
 		img.blend_rect(fig, Rect2i(Vector2i.ZERO, fig.get_size()), at)
-	return ImageTexture.create_from_image(img)
+	return img
 
 
 static func _token_for(art_id: StringName, hint: Dictionary) -> StringName:

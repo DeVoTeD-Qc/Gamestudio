@@ -250,6 +250,62 @@ func test_codex_is_a_viewer_with_trait_slots() -> void:
 # 3. Starter deck screen + Operator choice used by the run
 # =============================================================================
 
+## kc-codex-mem: browsing the ART panel rebuilds as little as it can (the wasm heap keeps every
+## peak): picking an art rebuilds the preview and the two tiles whose mark changes; closing the panel
+## frees its cards and leaves the grid (same tiles, same scroll) alone.
+func test_codex_art_panel_rebuilds_only_what_changes() -> void:
+	_reset_settings()
+	var t0: Array = await _spawn_title(Layout.PHONE)
+	var vp: SubViewport = t0[0]
+	var title: Control = t0[1]
+	title.open_codex()
+	await _frames(3)
+	var codex: Control = title.get_codex()
+	var grid_before: Array[Node] = codex.get_tiles()
+	var entry: Dictionary = {}
+	for n: Node in grid_before:
+		if (n.get_meta(&"entry")["arts"] as Array).size() >= 3:
+			entry = n.get_meta(&"entry")
+			break
+	assert_false(entry.is_empty(), "a card with 3+ arts")
+	codex.tap_entry(entry)
+	await _frames(2)
+	assert_true(codex.is_art_panel_open(), "ART panel open")
+	var tiles: Array[Node] = codex.get_art_tiles()
+	var arts: Array = entry["arts"]
+	var was: StringName = codex.selected_art
+	var pick: StringName = StringName(String(arts[2])) if StringName(String(arts[2])) != was else StringName(String(arts[1]))
+	codex.select_art(pick)
+	await _frames(2)
+	var after: Array[Node] = codex.get_art_tiles()
+	assert_eq(after.size(), tiles.size(), "same number of art tiles")
+	var rebuilt: int = 0
+	for i: int in after.size():
+		var art: StringName = after[i].get_meta(&"art")
+		assert_eq(art, StringName(String(arts[i])), "tile %d keeps its place" % i)
+		var marked: bool = bool((after[i].find_child("Card", true, false) as CardView).data.get("marked", false))
+		assert_eq(marked, art == pick, "%s: only the picked art is marked" % art)
+		if after[i] != tiles[i]:
+			rebuilt += 1
+			assert_true(art == pick or art == was, "%s: only the old and the new pick are rebuilt" % art)
+	assert_eq(rebuilt, 2, "two tiles rebuilt, not %d" % tiles.size())
+	codex.close_arts()
+	await _frames(2)
+	assert_false(codex.is_art_panel_open(), "closed")
+	assert_eq(codex.get_art_tiles().size(), 0, "the panel's cards are freed")
+	var grid_after: Array[Node] = codex.get_tiles()
+	assert_eq(grid_after.size(), grid_before.size(), "same grid")
+	var same: bool = true
+	for i: int in grid_after.size():
+		same = same and grid_after[i] == grid_before[i]
+	assert_true(same, "the grid is not rebuilt on close")
+	codex.tap_entry(entry)
+	await _frames(2)
+	assert_eq(codex.get_art_tiles().size(), arts.size(), "re-opening fills the panel again")
+	_despawn(vp)
+	await tree.process_frame
+
+
 func test_starter_screen_and_operator_choice_used_by_the_run() -> void:
 	_reset_settings()
 	var rs: Node = tree.root.get_node("RunState")
