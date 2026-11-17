@@ -532,6 +532,8 @@ func _play_round(supply_unspent: int, hand_size: int) -> void:
 	# MatchState.resolve_round(), split so the board can show the units that arrived at Reveal
 	# when the firefight starts.
 	var start: int = state.events.size()
+	if _screen.has_method(&"cancel_log_flash"):
+		_screen.cancel_log_flash()
 	# kc-fight-ui: the units already on the board before Reveal (the rival's new cards turn over one
 	# by one while the Reveal plays, see _reveal_lanes()).
 	var pre_uids: Dictionary = {}
@@ -622,6 +624,9 @@ func _play_round(supply_unspent: int, hand_size: int) -> void:
 	state.begin_round()
 	_begin_deploy()
 	round_presented.emit()
+	# kc-feedback-2: the LOG badge flashes once the round's playback is over (after any tip it opens).
+	if fx != null and _screen.has_method(&"request_log_flash"):
+		_screen.request_log_flash(log_flash_blocked)
 
 
 ## kc-board: short on-board callouts for events the board itself can't show (a Field torn down).
@@ -687,20 +692,36 @@ func _hold_concepts() -> void:
 	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
 	if guide == null:
 		return
-	guide.add_hold_check(self, func() -> bool:
-		if state == null or _screen == null or _is_tutorial() or _busy or _finished:
-			return true
-		if state.phase != MatchState.Phase.DEPLOY or is_pause_menu_open() or is_end_banner_open():
-			return true
-		# While the mulligan is up only its own tip may open (the rest point under the panel).
-		if is_mulligan_open():
-			return guide.peek_id() != &"mulligan"
-		if _screen.get_inspector().is_open():
-			return true
-		var intro: Variant = _screen.call(&"get_match_intro") if _screen.has_method(&"get_match_intro") else null
-		if intro is Control and (intro as Control).is_visible_in_tree():
-			return true
-		return _screen.has_method(&"is_flyout_open") and bool(_screen.call(&"is_flyout_open")))
+	guide.add_hold_check(self, func() -> bool: return _overlay_up(guide))
+
+
+## Something the player is reading or a round playing (the ConceptGuide's hold check; kc-feedback-2:
+## the LOG flash waits for it too).
+func _overlay_up(guide: Node) -> bool:
+	if state == null or _screen == null or _is_tutorial() or _busy or _finished:
+		return true
+	if state.phase != MatchState.Phase.DEPLOY or is_pause_menu_open() or is_end_banner_open():
+		return true
+	# While the mulligan is up only its own tip may open (the rest point under the panel).
+	if is_mulligan_open():
+		return guide == null or guide.peek_id() != &"mulligan"
+	if _screen.get_inspector().is_open():
+		return true
+	var intro: Variant = _screen.call(&"get_match_intro") if _screen.has_method(&"get_match_intro") else null
+	if intro is Control and (intro as Control).is_visible_in_tree():
+		return true
+	return _screen.has_method(&"is_flyout_open") and bool(_screen.call(&"is_flyout_open"))
+
+
+## kc-feedback-2 (the head: "Yes, flash it"): the LOG flash waits while a tip, an overlay or a
+## playback is up, and never runs under one.
+func log_flash_blocked() -> bool:
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide != null and guide.is_showing():
+		return true
+	if is_mulligan_open():
+		return true
+	return _overlay_up(guide)
 
 
 ## Tells the ConceptGuide what the player can see in this Deploy, each with its anchor, in the

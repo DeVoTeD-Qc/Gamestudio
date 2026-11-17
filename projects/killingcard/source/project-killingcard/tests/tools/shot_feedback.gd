@@ -85,6 +85,18 @@ func _run() -> void:
 		root.get_texture().get_image().save_png(out_dir.path_join(prefix + "score_2_plus_n.png"))
 		print("shot score_2_plus_n")
 	await _frames(60)
+	# kc-feedback-2: the LOG badge's flash after a round (first pulse peak, ~0.3 s in).
+	if m.has_method(&"request_log_flash"):
+		m.call(&"request_log_flash")
+		var lf: Node = m.call(&"get_log_flash")
+		var guard: int = 0
+		while guard < 240 and not (lf.call(&"is_flashing") and float(m.get_badge(&"score").get(&"flash")) > 0.9):
+			guard += 1
+			await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png(out_dir.path_join(prefix + "log_flash.png"))
+		print("shot log_flash")
+		await _frames(90)
 	# 3. A tip with its highlight (and arrow, after).
 	var saved_seen: Variant = guide.seen_override
 	guide.seen_override = {}

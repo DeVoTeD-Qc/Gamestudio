@@ -61,6 +61,7 @@ const BoardFxLocator: GDScript = preload("res://scripts/fx/board_fx_locator.gd")
 const MockMatchData: GDScript = preload("res://scripts/ui/mock_match_data.gd")
 const BoardMetrics: GDScript = preload("res://scripts/ui/board_metrics.gd")
 const PressGesture: GDScript = preload("res://scripts/ui/press_gesture.gd")
+const LogFlash: GDScript = preload("res://scripts/ui/log_flash.gd")
 const KillfeedEntry: GDScript = preload("res://scripts/fx/killfeed_entry.gd")
 const KillstreakRow: GDScript = preload("res://scripts/ui/killstreak_row.gd")
 const TraitRail: GDScript = preload("res://scripts/ui/trait_rail.gd")
@@ -182,6 +183,8 @@ var _trait_rail: Control = null
 var _new_card: NewCard = null
 ## kc-feedback: the score race over the board (score_race_bar.gd). False: no "+N" pops (tests, tools).
 var _score_race: ScoreRaceBar = null
+## kc-feedback-2: the LOG badge's flash after each round (log_flash.gd).
+var _log_flash: Node = null
 var _score_race_animate: bool = true
 var _reveal: Dictionary = {}
 var _rail_area: Rect2 = Rect2()
@@ -213,6 +216,9 @@ func _ready() -> void:
 		close_flyout()
 		rail_inspected.emit(&"score"))
 	_fx.locator.anchors[&"score"] = _score_race
+	_log_flash = LogFlash.new()
+	add_child(_log_flash)
+	_log_flash.badge = _score_badge
 	_fx.locator.anchors[&"streak"] = _streak_badge
 	_fx.streak_arc = _operator_panel.get_streak_arc()
 	# Killfeed: the director pushes toasts (over the board); each push is copied to the tray log.
@@ -671,6 +677,20 @@ func show_toast(text: String, seconds: float = TOAST_SECONDS) -> void:
 ## kc-feedback: the score race over the board (tests, QA, the concept anchor).
 func get_score_race() -> ScoreRaceBar:
 	return _score_race
+
+
+## kc-feedback-2 (the head: "Yes, flash it"): flash the LOG badge once (2 pulses, ~1.2 s, no sound)
+## when nothing blocks (blocked(): a tip or overlay is up); drawing only, input is never blocked.
+func request_log_flash(blocked: Callable = Callable()) -> void:
+	_log_flash.request(blocked)
+
+
+func cancel_log_flash() -> void:
+	_log_flash.cancel()
+
+
+func get_log_flash() -> Node:
+	return _log_flash
 
 
 ## kc-feedback: points just scored (the round's Score step, during playback): the race fills and pops "+N".

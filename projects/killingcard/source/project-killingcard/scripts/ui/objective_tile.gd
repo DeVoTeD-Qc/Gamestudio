@@ -19,11 +19,17 @@
 #   NAME, and on tall tiles (iPad, desktop) the one-line rule under it); with Fields, a square icon chip
 #   left of the Field chips (the chips shrink by its width). The chip is its own hit area
 #   (terrain_hit): tap = the rule as a toast, long press / right click = the Terrain inspector.
+#   kc-feedback-2 (the head: "bigger bar, take space from the middle row"): the phone tile is a thin
+#   strip now (28 px; portrait 40, desktop 80). A short tile (is_short(), under 40 px) puts the two
+#   sides' Field chips side by side at full height (the rival's left, yours right) instead of stacked,
+#   so their names stay as big as before; the letter plate leaves a 4 px margin for the FRONT bars.
 # Dependencies: BannerArtDB, BannerView (number metrics), hud_theme.tres colours, run_glyphs.gd.
 # Author: Mechanics Developer Agent (kc-board)
 extends Control
 
 const INK: Color = Color(0.05, 0.06, 0.07, 1.0)
+## kc-feedback-2: tiles under this height lay their Field chips side by side (is_short()).
+const SHORT_H: float = 40.0
 const RunGlyphs: GDScript = preload("res://scripts/ui/run/run_glyphs.gd")
 
 ## &"player" / &"enemy" / &"contested" / &"empty"
@@ -142,7 +148,7 @@ func _draw() -> void:
 		_:
 			draw_rect(plate.grow(-1.0), Color("#59636C"), false, 2.0)
 			letter_c = Color("#9AA4AD")
-	var lfs: int = int(roundf(mm * 0.55))
+	var lfs: int = int(roundf(mm * (0.8 if is_short() else 0.55)))
 	var lsz: Vector2 = word_font.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, lfs)
 	if control == &"enemy":
 		# A dark outline keeps the white letter clear of the hatching.
@@ -174,6 +180,15 @@ func _draw() -> void:
 			wfs -= 1
 		_word(word_font, wfs, word, Rect2(area.position.x, (h - wfs - 2.0) * 0.5, area.size.x, wfs + 2.0), wc)
 		return
+	if is_short():
+		# kc-feedback-2: side by side, full height: the rival's chip left, yours right (one alone fills it).
+		var both: bool = not top_fields.is_empty() and not bottom_fields.is_empty()
+		var cw: float = floorf((area.size.x - 4.0) * 0.5) if both else area.size.x
+		if not top_fields.is_empty():
+			_chip(Rect2(area.position, Vector2(cw, area.size.y)), &"enemy", top_fields[0])
+		if not bottom_fields.is_empty():
+			_chip(Rect2(Vector2(area.end.x - cw, area.position.y), Vector2(cw, area.size.y)), &"player", bottom_fields[0])
+		return
 	var half: float = floorf((area.size.y - 3.0) * 0.5)
 	if not top_fields.is_empty():
 		_chip(Rect2(area.position.x, area.position.y, area.size.x, half), &"enemy", top_fields[0])
@@ -187,6 +202,7 @@ func _terrain_chip_full(area: Rect2, tint: Color) -> void:
 	_terrain_rect = area
 	var id: StringName = StringName(str(terrain.get("id", "")))
 	var tall: bool = area.size.y >= 70.0
+	var short: bool = is_short()
 	var ip: float = minf(area.size.y, 44.0) if not tall else 40.0
 	var icon_r: Rect2 = Rect2(area.position + Vector2(0, (area.size.y - ip) * 0.5 if not tall else 2.0), Vector2(ip, ip))
 	draw_rect(icon_r, tint)
@@ -197,12 +213,18 @@ func _terrain_chip_full(area: Rect2, tint: Color) -> void:
 	var nm: String = BannerView.fit_text(String(terrain.get("name", "")).to_upper(), tf, tfs, room)
 	var nx: float = icon_r.end.x + 6.0
 	var ny: float = (icon_r.get_center().y if not tall else icon_r.position.y + ip * 0.5) - 2.0
-	var base: Vector2 = Vector2(nx, ny + (tf.get_ascent(tfs) - tf.get_descent(tfs)) * 0.5 - (6.0 if not tall else 0.0))
+	var base: Vector2 = Vector2(nx, ny + (tf.get_ascent(tfs) - tf.get_descent(tfs)) * 0.5 - (6.0 if not tall and not short else 0.0))
 	draw_string_outline(tf, base, nm, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs, 4, INK)
 	draw_string(tf, base, nm, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs, Color("#F2F5F7"))
 	# The control word, small, under the name (the letter mark's shape already says it too).
 	var wf: Font = get_theme_font(&"font", &"HudHeader")
 	var wc: Color = {&"player": _col(&"friend"), &"enemy": _col(&"enemy")}.get(control, Color("#B9C2C9"))
+	if short:
+		# kc-feedback-2: a thin tile: the control word at the right end, on the name's line.
+		var cw_w: float = wf.get_string_size(control_word(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		if nx + tf.get_string_size(nm, HORIZONTAL_ALIGNMENT_LEFT, -1, tfs).x + 8.0 + cw_w <= area.end.x:
+			draw_string(wf, Vector2(area.end.x - cw_w, base.y), control_word(), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, wc)
+		return
 	if not tall:
 		draw_string(wf, Vector2(nx, base.y + 16.0), control_word(), HORIZONTAL_ALIGNMENT_LEFT, room, 14, wc)
 		return
@@ -258,9 +280,24 @@ func _hatch(r: Rect2, col: Color, step: float, w: float) -> void:
 		x += step
 
 
-## kc-abc-labels: the letter mark's size (phone 52 px tile: 40; desktop 96: 64).
+## kc-abc-labels: the letter mark's size (52 px tile: 38; desktop 80: 46; 96: 62). kc-feedback-2: a short
+## tile (phone 28 px) keeps 4 px above and below the plate for the FRONT bars.
 func mark_size() -> float:
-	return minf(roundf(size.y * 0.76), 64.0)
+	return mark_size_for(size.y, compact)
+
+
+## kc-feedback-2: a thin tile (the phone's landscape row under the bigger score race).
+func is_short() -> bool:
+	return size.y < SHORT_H
+
+
+## The letter plate's size for a tile height (lane.gd's FRONT tab placement too). The plate always
+## leaves the FRONT tab's margin above and below it (phone tab 5 px, desktop 15 px, + 1 px each side).
+static func mark_size_for(h: float, is_compact: bool = true) -> float:
+	if h < SHORT_H:
+		return maxf(12.0, h - 8.0)
+	var tab_h: float = 5.0 if is_compact else 15.0
+	return minf(minf(roundf(h * 0.76), 64.0), h - 2.0 * (tab_h + 2.0))
 
 
 ## kc-abc-labels: where the Field chips go (tile-local): everything right of the letter mark
@@ -268,7 +305,8 @@ func mark_size() -> float:
 func field_area() -> Rect2:
 	var x: float = 6.0 + mark_size() + (8.0 if compact else 12.0)
 	var right: float = 4.0 + (worth_rect().size.x + 6.0 if worth > 0 else 0.0)
-	return Rect2(x, 3.0, maxf(0.0, size.x - x - right), maxf(0.0, size.y - 6.0))
+	var inset: float = 2.0 if is_short() else 3.0
+	return Rect2(x, inset, maxf(0.0, size.x - x - right), maxf(0.0, size.y - 2.0 * inset))
 
 
 ## kc-clarity: the worth tag's rect (tile-local; empty when the column scores nothing).

@@ -37,6 +37,13 @@ var hot: bool = false
 var font_size: int = 20
 ## kc-clarity: an optional font size per row (missing rows use font_size).
 var row_sizes: Array = []
+## kc-feedback-2: the LOG flash (log_flash.gd): 0..1 amber wash + ring; flash_gentle = reduced motion
+## (a steady highlight). Drawing only: input is unchanged.
+var flash: float = 0.0:
+	set(value):
+		flash = value
+		queue_redraw()
+var flash_gentle: bool = false
 var _gesture: RefCounted = null
 
 
@@ -92,6 +99,11 @@ func _draw() -> void:
 	if hot:
 		draw_rect(r.grow(-1.0), AMBER, false, 2.5)
 		draw_rect(r.grow(1.5), Color(AMBER, 0.35), false, 3.0)
+	if flash > 0.0:
+		draw_rect(r.grow(-2.0), Color(AMBER, (0.18 if flash_gentle else 0.32) * flash))
+		draw_rect(r.grow(-1.0), Color(AMBER, flash), false, 3.0)
+		if not flash_gentle:
+			draw_rect(r.grow(2.0), Color(AMBER, 0.4 * flash), false, 3.0)
 	var text_c: Color = get_theme_color(&"text", &"Hud")
 	var has_glyph: bool = glyph != &"none"
 	var g: float = 26.0

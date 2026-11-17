@@ -3,7 +3,7 @@
 #   the BannerArt data path, option A hand cards, landing ghosts, Protector slide, tap snapping,
 #   Field chips with the Overrun warning, the inspector's 512x128 banner and the QA bridge.
 #   Layout numbers are board-layout-v2.md's (kc-board2): phone 844x390 -> canvas 1168x540, banners
-#   216x54 under the score race (kc-feedback), strip 6..68, columns at x 76 / 306 / 536, tray 764..1162 with 104x130 hand cards; 16:9
+#   228x57 under the score race (kc-feedback-2: the objective row paid for it), strip 6..68, columns at x 76 / 318 / 560, tray 800..1162 with 104x130 hand cards; 16:9
 #   (canvas 960x540) 208x52; desktop 1440x900 -> canvas 1280x800, banners 304x76, columns at
 #   86 / 410 / 734, tray 1050..1274 with 108x136 cards. Plus the tray's OPEN / CLOSED / PEEK states
 #   by phase, the mirror layout, the strip badges and their flyouts, and the killfeed toasts + log.
@@ -24,27 +24,27 @@ func test_metrics_match_the_spec() -> void:
 	var m: Dictionary = BoardMetrics.compute(Vector2(1168 - 12, 540), true)
 	var bx: float = (m["board"] as Rect2).position.x + 6.0
 	var by: float = (m["board"] as Rect2).position.y
-	assert_eq([m["bw"], m["bh"]], [216.0, 54.0], "phone banner 216x54 (kc-feedback: the score race took 24 px; was 228x57)")
+	assert_eq([m["bw"], m["bh"]], [228.0, 57.0], "phone banner 228x57 (kc-feedback-2: restored; the objective row pays for the score race)")
 	assert_eq([(m["strip"] as Rect2).position.x + 6.0, (m["strip"] as Rect2).size.x], [6.0, 62.0], "strip 6..68")
 	assert_eq(bx, 76.0, "phone column A at x 76")
-	assert_eq(m["score_race"], Rect2(70, 4, 676, 21), "kc-feedback: the score race over the board, full board width")
-	assert_eq(float(m["col_x"][1]) + bx, 306.0, "column B at 306")
-	assert_eq(float(m["col_x"][2]) + bx, 536.0, "column C at 536")
-	assert_eq([(m["tray"] as Rect2).position.x + 6.0, (m["tray"] as Rect2).end.x + 6.0], [764.0, 1162.0], "tray 764..1162")
-	assert_eq(m["obj_h"], 52.0, "phone objective tile 52 px")
-	assert_eq(BoardMetrics.row_y(m, &"enemy", 3) + by, 28.0, "rival back row at y 28 (under the score race)")
-	assert_eq(BoardMetrics.row_y(m, &"enemy", 0) + by, 199.0, "rival front row at y 199")
-	assert_eq(BoardMetrics.objective_y(m) + by, 256.0, "objective at y 256")
-	assert_eq(BoardMetrics.row_y(m, &"player", 0) + by, 311.0, "your front row at y 311")
-	assert_eq(BoardMetrics.row_y(m, &"player", 3) + by + 54.0, 536.0, "your back row ends at y 536")
+	assert_eq(m["score_race"], Rect2(70, 2, 712, 28), "kc-feedback-2: the score race over the board, full board width, 28 px")
+	assert_eq(float(m["col_x"][1]) + bx, 318.0, "column B at 318")
+	assert_eq(float(m["col_x"][2]) + bx, 560.0, "column C at 560")
+	assert_eq([(m["tray"] as Rect2).position.x + 6.0, (m["tray"] as Rect2).end.x + 6.0], [800.0, 1162.0], "tray 800..1162")
+	assert_eq(m["obj_h"], 28.0, "phone objective row 28 px (kc-feedback-2: was 52)")
+	assert_eq(BoardMetrics.row_y(m, &"enemy", 3) + by, 32.0, "rival back row at y 32 (under the score race)")
+	assert_eq(BoardMetrics.row_y(m, &"enemy", 0) + by, 212.0, "rival front row at y 212")
+	assert_eq(BoardMetrics.objective_y(m) + by, 271.0, "objective at y 271")
+	assert_eq(BoardMetrics.row_y(m, &"player", 0) + by, 301.0, "your front row at y 301")
+	assert_eq(BoardMetrics.row_y(m, &"player", 3) + by + 57.0, 538.0, "your back row ends at y 538")
 	# kc-layout-a (direction A): the tray is sized first (>= 346 px); the base size is for a full hand
 	# (7 cards + the Operator, 2 columns, compact faces); HandArea re-fits to the real count.
-	assert_eq([m["card"], m["hand_cols"], m["face"]], [Vector2(195, 90), 2, &"compact"], "phone hand: 2 columns of 195x90 compact cards for 7 + the Operator")
+	assert_eq([m["card"], m["hand_cols"], m["face"]], [Vector2(177, 90), 2, &"compact"], "phone hand: 2 columns of 177x90 compact cards for 7 + the Operator")
 	assert_false(bool(m["ks_inline"]), "phone: the killstreak sockets left the tray")
 	assert_eq(m["ks"], Rect2(0, 189, 62, 187), "phone: 3 stacked 62x61 sockets in the strip, under STREAK")
-	assert_eq([(m["supply"] as Rect2).size, (m["rail_tray"] as Rect2)], [Vector2(249, 61), Rect2(255, 0, 143, 61)], "phone: Supply + the sets rail share the tray's top row")
+	assert_eq([(m["supply"] as Rect2).size, (m["rail_tray"] as Rect2)], [Vector2(226, 61), Rect2(232, 0, 130, 61)], "phone: Supply + the sets rail share the tray's top row")
 	var grid: Rect2 = m["grid"]
-	assert_eq([grid.position.x + 764.0, grid.position.y + 4.0], [764.0, 73.0], "hand grid at x 764, y 73")
+	assert_eq([grid.position.x + 800.0, grid.position.y + 4.0], [800.0, 73.0], "hand grid at x 800, y 73")
 	assert_eq([(m["undo"] as Rect2).position.y, (m["ready"] as Rect2).position.y], [468.0, 468.0], "UNDO + READY share the bottom row")
 	var badges: Array[Rect2] = BoardMetrics.badge_rects(m)
 	assert_eq(badges.map(func(r: Rect2) -> float: return r.position.y + 4.0), [4.0, 67.0, 130.0, 130.0, 382.0, 445.0, 475.0], "badge rows (no OPERATOR badge)")
@@ -59,19 +59,19 @@ func test_metrics_match_the_spec() -> void:
 	# Desktop 1440x900 (canvas 1280x800).
 	var d: Dictionary = BoardMetrics.compute(Vector2(1280 - 12, 800), false)
 	var dx: float = (d["board"] as Rect2).position.x + 6.0
-	assert_eq([d["bw"], d["bh"]], [296.0, 74.0], "desktop banner 296x74 (kc-feedback: under the score race; was 304x76)")
-	assert_eq([dx, float(d["col_x"][1]) + dx, float(d["col_x"][2]) + dx], [86.0, 402.0, 718.0], "desktop columns")
-	assert_eq(BoardMetrics.row_y(d, &"enemy", 3) + (d["board"] as Rect2).position.y, 52.0, "desktop rival back row at y 52")
-	assert_eq(BoardMetrics.row_y(d, &"player", 0) + (d["board"] as Rect2).position.y, 474.0, "desktop front row at y 474")
-	assert_eq(d["obj_h"], 96.0, "desktop objective tile 96 px")
-	assert_eq([(d["tray"] as Rect2).position.x + 6.0, (d["tray"] as Rect2).size.x], [1026.0, 248.0], "desktop tray 1026..1274")
-	assert_eq([d["card"], d["hand_cols"]], [Vector2(248, 72), 1], "desktop hand: one column of 248x72 cards for 7 + the Operator")
+	assert_eq([d["bw"], d["bh"]], [304.0, 76.0], "desktop banner 304x76 (kc-feedback-2: restored under the score race)")
+	assert_eq([dx, float(d["col_x"][1]) + dx, float(d["col_x"][2]) + dx], [86.0, 410.0, 734.0], "desktop columns")
+	assert_eq(BoardMetrics.row_y(d, &"enemy", 3) + (d["board"] as Rect2).position.y, 56.0, "desktop rival back row at y 56")
+	assert_eq(BoardMetrics.row_y(d, &"player", 0) + (d["board"] as Rect2).position.y, 470.0, "desktop front row at y 470")
+	assert_eq(d["obj_h"], 80.0, "desktop objective tile 80 px (kc-feedback-2: was 96)")
+	assert_eq([(d["tray"] as Rect2).position.x + 6.0, (d["tray"] as Rect2).size.x], [1050.0, 224.0], "desktop tray 1050..1274")
+	assert_eq([d["card"], d["hand_cols"]], [Vector2(224, 72), 1], "desktop hand: one column of 224x72 cards for 7 + the Operator")
 	assert_eq([(d["ks"] as Rect2).position.y, (d["ks"] as Rect2).size], [204.0, Vector2(68, 196)], "desktop killstreak sockets in the strip under STREAK")
 	# Mirror: the tray on the left, the strip on the right, the same board.
 	var mm: Dictionary = BoardMetrics.compute(Vector2(1156, 540), true, true)
 	assert_eq((mm["tray"] as Rect2).position.x, 0.0, "mirrored tray at the left edge")
 	assert_eq((mm["strip"] as Rect2).end.x, 1156.0, "mirrored strip at the right edge")
-	assert_eq([mm["bw"], (mm["board"] as Rect2).size.x], [216.0, 676.0], "mirrored board unchanged")
+	assert_eq([mm["bw"], (mm["board"] as Rect2).size.x], [228.0, 712.0], "mirrored board unchanged")
 	assert_eq((mm["board"] as Rect2).position.x, 1156.0 - (m["board"] as Rect2).end.x, "board mirrored")
 	# Narrow safe area (notch): banners keep 4:1 and the tray keeps its minimum.
 	var n: Dictionary = BoardMetrics.compute(Vector2(900, 540), true)
@@ -87,9 +87,9 @@ func test_board_numbers_readable() -> void:
 	assert_eq([d["badge"], d["number"], d["plate"]], [34.0, 24.0, 26.0], "desktop banner metrics")
 	var k: float = BoardLayout.points_per_px(BoardLayout.PHONE)
 	assert_true(float(p["number"]) * k >= 14.0, "phone stat numbers %.1f pt" % (float(p["number"]) * k))
-	# Slot tap pitch 57 px = 41 pt (kc-feedback: the score race took 24 px; was 60 px = 43 pt; v1: 47 px = 34 pt).
+	# Slot tap pitch 60 px = 43 pt (v1: 47 px = 34 pt; kc-feedback-2: restored under the score race).
 	var m: Dictionary = BoardMetrics.compute(Vector2(1156, 540), true)
-	assert_true((m["bh"] + m["row_gap"]) * k >= 41.0, "slot pitch %.1f pt" % ((m["bh"] + m["row_gap"]) * k))
+	assert_true((m["bh"] + m["row_gap"]) * k >= 43.0, "slot pitch %.1f pt" % ((m["bh"] + m["row_gap"]) * k))
 
 
 func test_live_layout_columns_and_rows() -> void:
@@ -101,11 +101,11 @@ func test_live_layout_columns_and_rows() -> void:
 		var m: Control = setup[1]
 		var label: String = screen["name"]
 		var lanes: Array[Node] = m.get_board().get_lanes()
-		var want_bh: float = 54.0 if m.compact else 74.0
+		var want_bh: float = 57.0 if m.compact else 76.0
 		for z: int in 3:
 			var lane: Node = lanes[z]
 			var tile: Rect2 = (lane.get_objective_tile() as Control).get_global_rect()
-			assert_true(absf(tile.size.x - want_bh * 4.0) < EPS and absf(tile.size.y - (52.0 if m.compact else 96.0)) < EPS, "%s objective tile %s" % [label, tile.size])
+			assert_true(absf(tile.size.x - want_bh * 4.0) < EPS and absf(tile.size.y - (28.0 if m.compact else 80.0)) < EPS, "%s objective tile %s" % [label, tile.size])
 			for i: int in 4:
 				var fr: Rect2 = (lane.get_friendly_slots()[i] as Control).get_global_rect()
 				var er: Rect2 = (lane.get_enemy_slots()[i] as Control).get_global_rect()

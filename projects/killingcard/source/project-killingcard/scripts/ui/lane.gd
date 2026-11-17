@@ -718,7 +718,7 @@ func _draw_decor() -> void:
 	# 6 px margin, so there it is a side-coloured bar (no word).
 	var font: Font = get_theme_font(&"font", &"HudHeader")
 	var obj_h: float = metrics["obj_h"]
-	var tab: Vector2 = Vector2(48, 5) if compact else Vector2(64, 15)
+	var tab: Vector2 = front_tab_size()
 	var fs: int = 13
 	for pair: Array in [[&"enemy", _enemy_slots], [&"player", _friendly_slots]]:
 		var slot: Node = pair[1][0]
@@ -758,9 +758,21 @@ func _draw_decor() -> void:
 ## kc-abc-labels: the FRONT tab sits over the column letter's mark (the tile's left, where the mark
 ## leaves a margin above and below), so it never covers the Field chips that now fill the tile.
 func front_tab_x(tab_w: float) -> float:
-	var obj_h: float = float(metrics.get("obj_h", 52.0))
-	var mm: float = minf(roundf(obj_h * 0.76), 64.0)
+	var mm: float = ObjectiveTile.mark_size_for(float(metrics.get("obj_h", 52.0)), compact)
 	return maxf(1.0, 6.0 + (mm - tab_w) * 0.5)
+
+
+## kc-feedback-2: the FRONT tab's size: desktop 64x15 (the word), phone 48x5; a short tile (the phone's
+## 28 px row) gets a 3 px bar as wide as the letter plate, in the 4 px margin over it.
+func front_tab_size() -> Vector2:
+	var obj_h: float = float(metrics.get("obj_h", 52.0))
+	if not compact:
+		# At most the letter plate + 8 px, so it stays off the Field chips right of the plate.
+		return Vector2(minf(64.0, ObjectiveTile.mark_size_for(obj_h, false) + 8.0), 15)
+	if obj_h < ObjectiveTile.SHORT_H:
+		# As wide as the letter plate it sits over, so it stays off the Field chips beside it.
+		return Vector2(ObjectiveTile.mark_size_for(obj_h), 3)
+	return Vector2(48, 5)
 
 
 ## The FRONT tab rects (lane-local) drawn now (tests): {&"enemy": Rect2, &"player": Rect2} for the
@@ -770,7 +782,7 @@ func front_tab_rects() -> Dictionary:
 	if metrics.is_empty():
 		return out
 	var oy: float = BoardMetrics.objective_y(metrics)
-	var tab: Vector2 = Vector2(48, 5) if compact else Vector2(64, 15)
+	var tab: Vector2 = front_tab_size()
 	for pair: Array in [[&"enemy", _enemy_slots], [&"player", _friendly_slots]]:
 		var slot: Node = pair[1][0]
 		if slot.kind != slot.Kind.UNIT or slot.pending:

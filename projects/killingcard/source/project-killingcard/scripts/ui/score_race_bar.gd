@@ -8,6 +8,9 @@
 #   pops beside the number, so the player sees what just scored. Original styling (the project's own
 #   palette and Barlow fonts).
 #   Tap, long press or right click opens the score rules (inspected): the studio inspect rule.
+#   kc-feedback-2 (the head: "Yes, bigger bar"): taller (phone 28 px = 20 pt, desktop 44 px), segments
+#   about 60 % of its height with a bright edge on each filled one, big numbers (phone 24 px), the target
+#   on a framed "TO 6" plate, and the "+N" as a solid amber chip with the segments it just filled ringed.
 # Usage: bar.set_score(you, rival, target, round, true)   # animate = a "+N" pop for what just scored
 # Dependencies: press_gesture.gd, hud_theme.tres (Hud friend / enemy colours).
 # Author: Mechanics Developer Agent (kc-feedback)
@@ -36,7 +39,7 @@ var target: int = 0
 var round_number: int = 1
 ## What the bars show right now (they slide toward you / rival).
 var shown: Vector2 = Vector2.ZERO
-## Live "+N" pops: {side: 0 you / 1 rival, text, t}.
+## Live "+N" pops: {side: 0 you / 1 rival, text, t, from: the score before (the ringed segments)}.
 var pops: Array[Dictionary] = []
 var _gesture: RefCounted = null
 var _tween: Tween = null
@@ -78,7 +81,7 @@ func set_score(p_you: int, p_rival: int, p_target: int, p_round: int = 1, animat
 	else:
 		for i: int in 2:
 			if gained[i] > 0:
-				pops.append({"side": i, "text": "+%d" % gained[i], "t": 0.0})
+				pops.append({"side": i, "text": "+%d" % gained[i], "t": 0.0, "from": [p_you, p_rival][i] - gained[i]})
 		if _tween != null and _tween.is_valid():
 			_tween.kill()
 		_tween = create_tween()
@@ -124,25 +127,36 @@ func _reduced_motion() -> bool:
 func layout() -> Dictionary:
 	var h: float = size.y
 	var fs: int = font_size()
-	var nfs: int = fs + 4
+	var nfs: int = number_font_size()
 	var label_w: float = ceilf(LABEL_FONT.get_string_size("RIVAL", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x) + 8.0
-	var num_w: float = ceilf(NUMBER_FONT.get_string_size("00", HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x) + 8.0
-	var goal_w: float = ceilf(LABEL_FONT.get_string_size("TO 00", HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x) + 14.0
+	var num_w: float = ceilf(NUMBER_FONT.get_string_size("00", HORIZONTAL_ALIGNMENT_LEFT, -1, nfs).x) + 10.0
+	var goal_w: float = ceilf(NUMBER_FONT.get_string_size("TO 00", HORIZONTAL_ALIGNMENT_LEFT, -1, goal_font_size()).x) + 18.0
 	var pad: float = 6.0
-	var bar_h: float = maxf(6.0, roundf(h * 0.42))
+	var bar_h: float = maxf(8.0, roundf(h * 0.6))
 	var y: float = (h - bar_h) * 0.5
 	var bar_w: float = maxf(20.0, (size.x - 2.0 * (pad + label_w + num_w) - goal_w) * 0.5)
 	var lx: float = pad
 	var you_bar: Rect2 = Rect2(lx + label_w + num_w, y, bar_w, bar_h)
 	var goal: Rect2 = Rect2(you_bar.end.x, 0.0, goal_w, h)
 	var rival_bar: Rect2 = Rect2(goal.end.x, y, bar_w, bar_h)
-	return {"bars": [you_bar, rival_bar], "goal": goal, "fs": fs, "nfs": nfs,
+	return {"bars": [you_bar, rival_bar], "goal": goal.grow_individual(-3.0, -2.0, -3.0, -2.0), "fs": fs, "nfs": nfs,
 			"labels": [Rect2(lx, 0, label_w, h), Rect2(rival_bar.end.x + num_w, 0, label_w, h)],
 			"nums": [Rect2(lx + label_w, 0, num_w, h), Rect2(rival_bar.end.x, 0, num_w, h)]}
 
 
+## The YOU / RIVAL labels (phone 28 px bar: 18 px = 13 pt; desktop 44: 24). A narrow bar (portrait)
+## caps the words by its width so the segments keep most of it.
 func font_size() -> int:
-	return clampi(int(size.y * 0.62), 15, 22)
+	return clampi(mini(int(size.y * 0.66), int(size.x / 30.0)), 15, 24)
+
+
+## kc-feedback-2: the score numbers (phone 26 px = 19 pt; desktop 40) and the target plate.
+func number_font_size() -> int:
+	return clampi(mini(int(size.y * 0.95), int(size.x / 18.0)), 19, 40)
+
+
+func goal_font_size() -> int:
+	return clampi(mini(int(size.y * 0.68), int(size.x / 26.0)), 16, 30)
 
 
 func _draw() -> void:
@@ -168,37 +182,67 @@ func _draw() -> void:
 		_bar(g["bars"][i], vals[i], cols[i], i == 1)
 		for p: Dictionary in pops:
 			if int(p["side"]) == i:
-				# "+N" rises out of the number and fades (amber: it just scored).
 				var k: float = float(p["t"]) / POP_S
 				var a: float = 1.0 - clampf((k - 0.6) / 0.4, 0.0, 1.0)
-				var pc: Vector2 = Vector2(nr.get_center().x, nr.get_center().y + size.y * (0.9 - 0.5 * k))
+				# The segments that just filled get an amber ring (which points landed).
+				_ring_segments(g["bars"][i], int(p.get("from", 0)), nums[i], i == 1, a)
+				# "+N" rises out of the number and fades (amber: it just scored), drawn under the bar.
+				var pc: Vector2 = Vector2(nr.get_center().x, size.y + nfs * (0.75 - 0.25 * k))
 				_pop_chip(String(p["text"]), pc, nfs, a)
 	var goal: Rect2 = g["goal"]
+	var gfs: int = goal_font_size()
 	if target > 0:
-		_text_c(LABEL_FONT, "TO %d" % target, goal.get_center(), fs, Color.WHITE)
+		# The finish line: a framed plate in the middle, both bars run into it.
+		var gsb := StyleBoxFlat.new()
+		gsb.bg_color = Color(0, 0, 0, 0.45)
+		gsb.border_color = Color(1, 1, 1, 0.55)
+		gsb.set_border_width_all(2)
+		gsb.set_corner_radius_all(4)
+		draw_style_box(gsb, goal)
+		_text_c(NUMBER_FONT, "TO %d" % target, goal.get_center(), gfs, Color.WHITE)
 	else:
 		_text_c(LABEL_FONT, "R%d" % round_number, goal.get_center(), fs, MUTED)
 
 
-## The "+N" chip under the number (drawn over the board's top edge so it never hides the bar).
+## The "+N" chip under the number (drawn over the board's top edge so it never hides the bar): a solid
+## amber chip with dark digits and a dark keyline, readable over any art.
 func _pop_chip(text: String, center: Vector2, fs: int, a: float) -> void:
-	var w: float = NUMBER_FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 10.0
-	var rr: Rect2 = Rect2(center.x - w * 0.5, center.y - fs * 0.55, w, fs * 1.1)
-	draw_rect(rr, Color(0, 0, 0, 0.75 * a))
-	draw_rect(rr, Color(AMBER, a), false, 1.5)
-	_text_c(NUMBER_FONT, text, rr.get_center(), fs, Color(AMBER, a))
+	var w: float = NUMBER_FONT.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 14.0
+	var rr: Rect2 = Rect2(center.x - w * 0.5, center.y - fs * 0.6, w, fs * 1.2)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(AMBER, a)
+	sb.border_color = Color(0, 0, 0, 0.8 * a)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(4)
+	draw_style_box(sb, rr)
+	_text_c(NUMBER_FONT, text, rr.get_center(), fs, Color(0.07, 0.08, 0.09, a))
+
+
+## The geometry of a side's segment s (0 = the outside end), shared by _bar and the pop ring.
+func _segment(row: Rect2, s: int, hatched: bool) -> Rect2:
+	var n: int = maxi(1, target)
+	var seg_w: float = (row.size.x - SEG_GAP * float(n - 1)) / float(n)
+	var slot: int = s if not hatched else n - 1 - s
+	return Rect2(row.position.x + slot * (seg_w + SEG_GAP), row.position.y, seg_w, row.size.y)
+
+
+## kc-feedback-2: amber rings around segments [from, to) (the points that just landed).
+func _ring_segments(row: Rect2, from: int, to: int, hatched: bool, a: float) -> void:
+	if target <= 0:
+		return
+	for s: int in range(maxi(0, from), mini(to, target)):
+		draw_rect(_segment(row, s, hatched).grow(1.5), Color(AMBER, a), false, 3.0)
 
 
 ## One side's track: `target` segments (one per point), filled up to `value` (fractional while sliding),
 ## from the outside in.
 func _bar(row: Rect2, value: float, col: Color, hatched: bool) -> void:
 	var n: int = maxi(1, target)
-	var seg_w: float = (row.size.x - SEG_GAP * float(n - 1)) / float(n)
 	for s: int in n:
 		# Yours fills left -> right, the rival's right -> left: both toward the target in the middle.
-		var slot: int = s if not hatched else n - 1 - s
-		var seg: Rect2 = Rect2(row.position.x + slot * (seg_w + SEG_GAP), row.position.y, seg_w, row.size.y)
+		var seg: Rect2 = _segment(row, s, hatched)
 		draw_rect(seg, TRACK)
+		draw_rect(seg, Color(1, 1, 1, 0.16), false, 1.0)
 		var fill: float = clampf(value - float(s), 0.0, 1.0) if target > 0 else 0.0
 		if fill <= 0.0:
 			continue
@@ -219,7 +263,9 @@ func _bar(row: Rect2, value: float, col: Color, hatched: bool) -> void:
 					draw_line(p0.lerp(p1, t0), p0.lerp(p1, t1), Color(0, 0, 0, 0.35), 1.5)
 				x += step
 		else:
-			draw_rect(Rect2(f.position, Vector2(f.size.x, 2.0)), Color(1, 1, 1, 0.35))
+			draw_rect(Rect2(f.position, Vector2(f.size.x, 3.0)), Color(1, 1, 1, 0.4))
+		# A dark keyline on every filled segment keeps the count readable (one block per point).
+		draw_rect(f, Color(0, 0, 0, 0.55), false, 1.0)
 
 
 func _text(font: Font, text: String, left_mid: Vector2, fs: int, col: Color) -> void:

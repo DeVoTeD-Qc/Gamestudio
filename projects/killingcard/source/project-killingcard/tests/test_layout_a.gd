@@ -163,6 +163,7 @@ func _check(vp: SubViewport, m: Control, label: String, n: int) -> void:
 func test_control_plates_letter_only() -> void:
 	var t: Control = load("res://scripts/ui/objective_tile.gd").new()
 	t.size = Vector2(228, 52)
+	t.compact = true  # a 52 px tile is a phone tile (kc-feedback-2: the plate leaves the FRONT tab's margin)
 	t.letter = "B"
 	for ctl: StringName in [&"player", &"enemy", &"contested", &"none"]:
 		t.control = ctl
@@ -203,7 +204,7 @@ func test_metrics_tray_first() -> void:
 		assert_true((mm["tray"] as Rect2).size.x >= 346.0 - EPS, "%s: the tray keeps 346 px (%s)" % [a, mm["tray"]])
 		assert_eq(int(mm["hand_cols"]), 2, "%s: a 2-column hand" % a)
 		assert_true((mm["board"] as Rect2).end.x <= (mm["tray"] as Rect2).position.x, "%s: the board left of the tray" % a)
-	assert_eq(float(BoardMetrics.compute(Vector2(1156, 540), true)["bh"]), 54.0, "844: 54 px banners (kc-feedback: the score race over the board)")
+	assert_eq(float(BoardMetrics.compute(Vector2(1156, 540), true)["bh"]), 57.0, "844: the board keeps its 57 px banners (kc-feedback-2: under the score race)")
 	for n: int in range(1, 9):
 		var f: Dictionary = BoardMetrics.hand_fit(Vector2(346, 404), n + 1, 8.0, BoardMetrics.X1_MIN_H, n)
 		assert_false(bool(f["scroll"]), "SE grid, %d cards: no scroll" % n)

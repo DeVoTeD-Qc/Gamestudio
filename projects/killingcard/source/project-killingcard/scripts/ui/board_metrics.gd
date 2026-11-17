@@ -2,7 +2,7 @@
 # Purpose: The board grid of board-layout-v2.md (kc-board2, approved) as numbers. The board takes the
 #   full height; an icon strip sits on one side and the hand tray on the other (strip left / tray
 #   right, swapped by the "mirror layout" setting):
-#     bh = floor((H - 2*pad_y - 2*mid_gap - obj_h - 6*row_gap) / 8),   bw = 4 * bh
+#     bh = floor((H - 2*pad_y - 2*mid_gap - obj_h - 6*row_gap - score_h) / 8),   bw = 4 * bh
 #     tray_w = W - strip_w - side_gap - board_w - tray_gap
 #   If the tray would get narrower than tray_min, the banners shrink (keeping 4:1) until it fits.
 #   kc-layout-a (ux-layout-v2.html direction A, the head's L1-L5): the TRAY is sized first (phone
@@ -10,6 +10,8 @@
 #   takes the rest. The killstreak sockets sit in the strip under STREAK; landscape drops the OPERATOR
 #   badge (the Operator card is the hand grid's first card); the phone's sets rail moves to the tray's
 #   top row beside the Supply box. Faces: full / mid (rule lines) where there is room, compact at 6-7.
+#   kc-feedback-2: the score race (score_h) sits over the board, paid for by a thinner objective row
+#   (phone 28 px, desktop 80) and smaller gaps; the formula's fixed part includes score_h.
 #   Phone 844x390 (canvas 1168x540, safe area 1156x540): banners 228x57 (unchanged), tray 362 wide,
 #     7 cards: 177x90 compact cards; 4 cards: 177x127 full faces.
 #   Safari 750x390 (canvas 1038x540): banners 192x48, tray 352. 16:9 phone (canvas 960x540): banners
@@ -36,14 +38,20 @@ const CARD_MIN_H: float = 64.0
 const CARD_MIN_W: float = 96.0
 const CARD_RATIO_WIDE: float = 2.4
 const CARD_RATIO_MIN: float = 1.3
-const PHONE: Dictionary = {"pad_y": 4.0, "row_gap": 3.0, "mid_gap": 3.0, "obj_h": 52.0, "gutter": 14.0,
+## kc-feedback-2 (the head: "Yes, bigger bar, take space from the middle row"): the score race over the
+## board (score_h, its rect is score_h - score_gap tall) is paid for by the objective row (obj_h) and the
+## outer / middle gaps, so the banners keep their kc-board2 size (phone 228x57, desktop 304x76).
+const PHONE: Dictionary = {"pad_y": 2.0, "row_gap": 3.0, "mid_gap": 2.0, "obj_h": 28.0, "gutter": 14.0,
 		"strip_w": 62.0, "badge_h": 61.0, "badge_gap": 2.0, "side_gap": 8.0, "tray_gap": 12.0, "tray_min": 346.0,
 		"tray_pad": 4.0, "card_max": Vector2(104, 130), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 64.0, "tab_h": 64.0,
-		"ks_h": 64.0, "ks_w": 62.0, "menu_h": 61.0, "ks_v_h": 61.0, "score_h": 24.0}
-const DESKTOP: Dictionary = {"pad_y": 12.0, "row_gap": 6.0, "mid_gap": 6.0, "obj_h": 96.0, "gutter": 20.0,
+		"ks_h": 64.0, "ks_w": 62.0, "menu_h": 61.0, "ks_v_h": 61.0, "score_h": 30.0, "score_gap": 2.0}
+const DESKTOP: Dictionary = {"pad_y": 8.0, "row_gap": 6.0, "mid_gap": 6.0, "obj_h": 80.0, "gutter": 20.0,
 		"strip_w": 68.0, "badge_h": 64.0, "badge_gap": 4.0, "side_gap": 12.0, "tray_gap": 12.0, "tray_min": 224.0,
 		"tray_pad": 12.0, "card_max": Vector2(108, 136), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 72.0, "tab_h": 64.0,
-		"ks_h": 64.0, "ks_w": 62.0, "menu_h": 64.0, "ks_v_h": 64.0, "score_h": 40.0}
+		"ks_h": 64.0, "ks_w": 62.0, "menu_h": 64.0, "ks_v_h": 64.0, "score_h": 48.0, "score_gap": 4.0}
+## kc-feedback-2: portrait banners are sized by the width, so the race and the objective row get more height.
+const PORTRAIT_SCORE_H: float = 42.0
+const PORTRAIT_OBJ_H: float = 40.0
 
 
 ## area: the safe-area size the match screen lays out in. mirror: tray left, strip right.
@@ -86,7 +94,7 @@ static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dicti
 		strip.position.x = area.x - strip.end.x
 		board.position.x = area.x - board.end.x
 		tray.position.x = area.x - tray.end.x
-	p["score_race"] = score_race_rect(board, p["score_h"])
+	p["score_race"] = score_race_rect(board, p["score_h"], p["score_gap"])
 	p["compact"] = compact
 	p["mirror"] = mirror
 	p["bh"] = bh
@@ -101,9 +109,9 @@ static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dicti
 	return p
 
 
-## kc-feedback: the score race's rect, right over the board (full board width, a 3 px gap under it).
-static func score_race_rect(board: Rect2, score_h: float) -> Rect2:
-	return Rect2(board.position.x, board.position.y - score_h, board.size.x, score_h - 3.0)
+## kc-feedback: the score race's rect, right over the board (full board width, a `gap` px gap under it).
+static func score_race_rect(board: Rect2, score_h: float, gap: float = 3.0) -> Rect2:
+	return Rect2(board.position.x, board.position.y - score_h, board.size.x, score_h - gap)
 
 
 ## kc-layout-a (the head's L4): the killstreak sockets live in the icon strip, under the STREAK
@@ -364,6 +372,9 @@ static func compute_portrait(area: Vector2) -> Dictionary:
 	p["btn_h"] = PORTRAIT_BTN_H
 	p["compact"] = true
 	p["mirror"] = false
+	p["score_h"] = PORTRAIT_SCORE_H
+	p["obj_h"] = PORTRAIT_OBJ_H
+	p["mid_gap"] = 3.0
 	var pad: float = PORTRAIT_PAD
 	p["gutter"] = PORTRAIT_GUTTER
 	var w: float = area.x - 2.0 * pad
@@ -377,7 +388,7 @@ static func compute_portrait(area: Vector2) -> Dictionary:
 	var score_h: float = p["score_h"]
 	var board: Rect2 = Rect2(floorf((area.x - board_w) * 0.5), strip.end.y + 8.0 + score_h, board_w, board_h)
 	var tray: Rect2 = Rect2(pad, board.end.y + 8.0, w, maxf(0.0, area.y - board.end.y - 8.0 - 4.0))
-	p["score_race"] = score_race_rect(board, score_h)
+	p["score_race"] = score_race_rect(board, score_h, p["score_gap"])
 	p["bh"] = bh
 	p["bw"] = bw
 	p["half_h"] = half_h
