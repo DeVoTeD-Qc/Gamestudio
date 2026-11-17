@@ -6,8 +6,9 @@
 #     "Met only". Entries you haven't met yet are dark silhouettes named "???" (head's M4 a); what
 #     you have met is saved in the profile (DDProfile.codex_met). Every tile has its 2-line tooltip
 #     on right click / long press, and a tap on a tile opens it too.
-#   - The GLOSSARY (the ? in the street's HUD, and How to play): every icon in the game, one line
-#     each, in sections, plus how a street works in five short lines.
+#   - The GUIDE (mode "glossary": the ? in the street's HUD, Guide on the title and in the Menu):
+#     ui-pass-3: every concept of the explain-once registry (DDConcepts, data/concepts.json) in full,
+#     by group, with its icon, then every gun's challenge. Seen or not, everything is listed.
 #   Both close with the Close button, Esc, or a tap on the dim edge. They sit under the tooltip
 #   overlay, so tooltips open on top of them.
 # Dependencies: DDUi, DDText, DDPayloads, DDBalance, DDProfile, DDCardView, scripts/ui/dd_art.gd,
@@ -476,7 +477,7 @@ func _codex_tile(e: Dictionary, met: bool, sz: Vector2) -> DDCardView:
 func open_glossary(bal: DDBalance) -> void:
 	_bal = bal
 	mode = "glossary"
-	var v: VBoxContainer = _frame("Help · Glossary", "")
+	var v: VBoxContainer = _frame("Guide", "")
 	var inner: VBoxContainer = _scroll(v)
 	for sec: Array in sections(bal):
 		var h: Label = DDUi.label(str(sec[0]), DDUi.FONT_S - 4, DDUi.WARN)
@@ -492,18 +493,17 @@ func open_glossary(bal: DDBalance) -> void:
 	opened.emit()
 
 
-## Glossary sections: [title, [{icon, name, line}...]]. icon: "burst:4", "strength:7", "num:M:4", "rule:down",
-## "badge:challenge", "lock", "socket", "chip:-3", "text:HOLD" ...
+## ui-pass-3: the Guide's sections: every concept of data/concepts.json (DDConcepts) by group, in full,
+## then the challenges of every gun (reference). [title, [{icon, name, line, concept?}...]]. icon: a
+## Guide icon id ("burst:4", "strength:7", "num:M:4", "rule:down", "badge:challenge", "lock", "text:HOLD"...).
 static func sections(bal: DDBalance) -> Array:
-	var rules: Array = []
-	# dd-ux-text: each rule by the same tag as the gun tile, then the same words as every tooltip
-	for r: Array in [["any", "Service Pistol"], ["down", "Hunting Rifle"], ["up", "Ratchet Crossbow"], ["same", "Twin-Bore"], ["zigzag", "Lever Rifle"],
-			["close", "Scout Carbine"], ["parity", "Nail Driver"], ["spread", "Pump Shotgun"], ["big", "Elephant Gun"], ["small", "Alley Sweeper"],
-			["heavy", "Stovepipe Launcher"]]:
-		var tag: String = DDText.rule_tag(str(r[0]))
-		rules.append({"icon": "rule:" + str(r[0]), "name": tag.substr(0, 1) + tag.substr(1).to_lower(), "line": "Each kill: %s (%s)." % [DDText.rule_short(str(r[0])), str(r[1])]})
-	rules.append({"icon": "rule:down", "name": "Last or lower / higher", "line": "Rosa's Steady Hands: the Rifle and Crossbow also take an equal number."})
-	rules.append({"icon": "rule:bent", "name": "Bent rule", "line": "Loose Grip: once per wave, one kill may break its rule."})
+	var out: Array = []
+	for g: String in DDConcepts.groups():
+		var rows: Array = []
+		for id: String in DDConcepts.in_group(g):
+			rows.append({"icon": DDConcepts.icon(id), "name": DDConcepts.title(id, bal), "line": DDConcepts.text(id, bal), "concept": id})
+		if not rows.is_empty():
+			out.append([g.to_upper(), rows])
 	# dd-challenge-rack: every challenge with its gun, its rule in plain words and an example
 	var chals: Array = []
 	var ws: Dictionary = bal.weapons()
@@ -515,54 +515,8 @@ static func sections(bal: DDBalance) -> Array:
 		var ct: String = DDText.challenge_text(cid, bal)
 		chals.append({"icon": "badge:challenge_open", "name": "%s (%s)" % [DDText.challenge_name(cid), bal.weapon_name(str(wid))],
 			"line": "%s%s. Pays %s." % [ct.substr(0, 1).to_upper(), ct.substr(1), DDText.reward_text(str(rw[0]), int(rw[1]), bal)]})
-	return [
-		["NUMBER BADGES: THE CARD THEY SIT ON AND THEIR SHAPE SAY WHAT", [
-			{"icon": "burst:4", "name": "Weapon strength (round badge on a gun or melee card)", "line": "How hard the weapon hits. You lose the zombie's strength minus this in HP. (Yellow fill.)"},
-			{"icon": "stat:cap:4", "name": "Capacity (stack of squares, on a gun)", "line": "A gun's kills before it pays out: 4 kills fill it, then +%d and it leaves." % bal.shown(bal.num("finish_bonus"))},
-			{"icon": "stat:uses:3", "name": "Uses (stack of dots, on a melee weapon)", "line": "A melee weapon's uses: each kill uses 1; at 0 it breaks."},
-			{"icon": "strength:7", "name": "Zombie strength (round badge on a zombie card)", "line": "Its attack and toughness. A gun kill pays it ×10 pts. (Dark red fill.)"},
-			{"icon": "tiers", "name": "Tier (the ring around a zombie's badge)", "line": "Shambler 1-3, Lurcher 4-6, Bruiser 7-9, Hulk 10+: the card's name says the tier too."},
-			{"icon": "num:M:4", "name": "Heal (round badge on a medkit card)", "line": "A medkit's number: the HP it heals."},
-			{"icon": "num:C:3", "name": "Cover (round badge on a cover card)", "line": "A cover card's number: the Cover you gain."},
-		]],
-		["ON YOUR WEAPONS", [
-			{"icon": "socket", "name": "Kill sockets", "line": "One per kill the gun holds; a filled one shows the kill."},
-			{"icon": "next", "name": "Next socket", "line": "What the next kill needs: ≤5 means 5 or lower, ≥8 means 8 or higher."},
-			{"icon": "badge:full_set", "name": "Full set", "line": "Every socket filled: +%d pts, then the gun leaves. 1 to go: the cup glows." % bal.shown(bal.num("finish_bonus"))},
-			{"icon": "badge:challenge_open", "name": "Challenge", "line": "Fill the gun a special way for an extra reward."},
-			{"icon": "text:ACTIVE", "name": "Active weapon", "line": "Tap a gun or melee; taps on zombies use it."},
-			{"icon": "art:bare_hands", "name": "Bare Hands", "line": "Your melee: any zombie, no points, never breaks."},
-			{"icon": "text:+N", "name": "Salvage", "line": "Swap out a gun: it pays part of its kills back."},
-			{"icon": "mod:open_breech", "name": "Gun Mod (MOD chip)", "line": "Fitted at the safehouse to gun slot 1 or 2; every gun in that slot gets its rule."},
-		]],
-		["WEAPON RULES: WHICH ZOMBIE CAN GO ON NEXT", rules],
-		["CHALLENGES: FILL THE GUN THIS WAY FOR ITS EXTRA REWARD", chals],
-		["ON ZOMBIES", [
-			{"icon": "chip:-3", "name": "Damage chip (top corner of a zombie)", "line": "The HP you lose with the active weapon, after Cover. 0 = none; DIES = it ends the run (a tap asks first)."},
-			{"icon": "litdark", "name": "Lit / dark", "line": "Lit = the active gun can take it; dark = it can't."},
-			{"icon": "text:LOCK", "name": "Rule lock", "line": "The active gun can't take it; the card says what it needs (e.g. needs ≤5)."},
-			{"icon": "text:HOLD", "name": "Holdover", "line": "The card you didn't resolve stays for the next street."},
-		]],
-		["ON THE BOARD", [
-			{"icon": "wave", "name": "Wave door", "line": "The big number is the wave now; +N waves wait."},
-			{"icon": "lock", "name": "Room price", "line": "Locked until you have the points; the bar fills."},
-			{"icon": "open", "name": "Gold plate", "line": "You can pay: tap it to open the room (3 cards + a machine)."},
-			{"icon": "text:USE", "name": "USE", "line": "The room's machine, once per wave."},
-			{"icon": "pile", "name": "Draw pile", "line": "Cards are dealt from here. The order is hidden."},
-			{"icon": "pips", "name": "Resolve dots", "line": "Deal with %d of the %d cards; 1 stays." % [bal.num("actions"), bal.num("street_size")]},
-			{"icon": "text:+2", "name": "Cover", "line": "Takes damage before your HP."},
-			{"icon": "text:PTS", "name": "Points", "line": "Gun kills pay. Spend them on rooms and machines."},
-			{"icon": "text:RUN", "name": "Run", "line": "-%d HP: the street's cards go to the bottom of the pile. Not twice in a row." % bal.num("run_damage")},
-			{"icon": "text:SHOP", "name": "Safehouse Shop", "line": "Spend your points before you leave: they stay behind."},
-		]],
-		["HOW A STREET WORKS", [
-			{"icon": "text:1", "name": "Deal", "line": "%d cards come off the pile." % bal.num("street_size")},
-			{"icon": "text:2", "name": "Pick a weapon", "line": "Tap a gun (or melee), then tap zombies."},
-			{"icon": "text:3", "name": "Fill sockets", "line": "Each gun kill fills a socket and pays its number. The gun's rule says what fits next."},
-			{"icon": "text:4", "name": "Fill guns", "line": "A full gun pays +%d and its challenge, then leaves." % bal.shown(bal.num("finish_bonus"))},
-			{"icon": "text:5", "name": "Waves, then the boss", "line": "When the pile runs out, the next wave joins it."},
-		]],
-	]
+	out.append(["EVERY GUN'S CHALLENGE", chals])
+	return out
 
 
 func _gloss_row(row: Dictionary) -> DDCardView:

@@ -62,7 +62,8 @@ func test_points_chip_shows_the_score() -> void:
 	m.call("_render")
 	await _settle()
 	var pv: DDCardView = m.get("_points_view")
-	check(pv != null and _labels(pv).contains("score 400"), "the PTS chip shows the score under the points (%s)" % _labels(pv))
+	# ui-pass-3: on the street the chip is what you can spend; the score is in its tooltip
+	check(pv != null and not _labels(pv).contains("score"), "the street PTS chip shows only the points (%s)" % _labels(pv))
 	check(str(pv.payload.get("t1", "")).contains("to spend") and str(pv.payload.get("t1", "")).contains("score 400"), "its tooltip names both")
 	await _done(m)
 
@@ -74,8 +75,14 @@ func test_door_shows_use_cost_and_asks_when_short() -> void:
 	await _go(m, {"screen": "street", "seed": "5", "points": "0"})
 	var run: DDRun = _run()
 	var ob: Button = m.find_child("Open0", true, false)
+	# ui-pass-3: a locked door shows one number (its price); the machine's cost appears once you can open it
+	check(ob.find_child("UseCost", true, false) == null, "a locked door: no second price")
+	run.points = run.room_cost(0)
+	m.call("_render")
+	await _settle()
+	ob = m.find_child("Open0", true, false)
 	var ul: Label = ob.find_child("UseCost", true, false)
-	check(ul != null and ul.text == "+%d to use" % bal().shown(run.machine_min_price(0)), "the plate says what the machine costs")
+	check(ul != null and ul.text == "+%d to use" % bal().shown(run.machine_min_price(0)), "the gold plate says what the machine costs")
 	check(str(DDPayloads.room_plate(run, 0).get("t2", "")).contains("Door + one use: %d" % bal().shown(run.room_total_cost(0))), "the plate's tooltip gives the total")
 	run.points = run.room_cost(0)
 	m.call("request_open_room", 0)

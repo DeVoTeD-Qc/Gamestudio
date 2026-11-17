@@ -1,5 +1,6 @@
 # dd_settings_panel.gd
-# Purpose: dd-feel. The Settings overlay: master volume, SFX volume, screen shake, reduce motion.
+# Purpose: dd-feel. The Settings overlay: master volume, SFX volume, screen shake, reduce motion,
+#   ui-pass-3: Tips on / off and Reset tips (the explain-once concept callouts).
 #   Every change goes through Game.set_setting(), which saves it in the profile (user://) and
 #   applies it right away. Opened from the title, map and street screens; Done / Esc / tapping the
 #   dim area closes it. Large touch targets (sliders 56 px tall, toggles 72 px).
@@ -65,6 +66,17 @@ func open() -> void:
 	grid.add_child(_slider(g, "sfx_volume", "Sound effects"))
 	grid.add_child(_toggle(g, "screen_shake", "Screen shake"))
 	grid.add_child(_toggle(g, "reduce_motion", "Reduce motion"))
+	# ui-pass-3: explain-once tips (each idea is explained the first time it shows up)
+	grid.add_child(_toggle(g, "tips", "Tips"))
+	var rt: Button = DDUi.button("Reset tips", DDUi.PANEL_HI, DDUi.FONT_M)
+	rt.name = "ResetTips"
+	rt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rt.pressed.connect(func() -> void:
+		g.profile.reset_concepts()
+		rt.text = "Tips reset: you'll see them again"
+		rt.disabled = true
+		Sfx.cue(&"flip"))
+	grid.add_child(rt)
 	v.add_child(DDUi.label("Reduce motion: cards fade instead of flying, no shake or zoom.", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	v.add_child(_skin_row(g))
 	var more: HBoxContainer = DDUi.hbox(8)
@@ -74,7 +86,7 @@ func open() -> void:
 	cx.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cx.pressed.connect(func() -> void: codex_requested.emit())
 	more.add_child(cx)
-	var hp: Button = DDUi.button("Help · Glossary", DDUi.PANEL_HI, DDUi.FONT_M)
+	var hp: Button = DDUi.button("Guide", DDUi.PANEL_HI, DDUi.FONT_M)
 	hp.name = "MenuHelp"
 	hp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hp.pressed.connect(func() -> void: help_requested.emit())

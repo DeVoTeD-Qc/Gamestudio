@@ -32,6 +32,10 @@ const SettingsPanel: GDScript = preload("res://scripts/ui/dd_settings_panel.gd")
 const StackBox: GDScript = preload("res://scripts/ui/dd_stack_box.gd")
 const Marks: GDScript = preload("res://scripts/ui/dd_marks.gd")
 const Codex: GDScript = preload("res://scripts/ui/dd_codex.gd")
+const Callout: GDScript = preload("res://scripts/ui/dd_callout.gd")
+## ui-pass-3: the first run deals from this seed: a gentle first street (3 small zombies the
+## Pistol can take and a cover card), then a gun card and a holdover, so the concepts come one at a time.
+const FIRST_RUN_SEED: int = 11
 
 enum Screen { TITLE, MAP, STREET, SAFEHOUSE, END }
 
@@ -42,7 +46,6 @@ const SEP: int = 8
 ## on the street is at least that tall.
 const HUD_H: float = 64.0
 const ACT_H: float = 64.0
-const HINT_H: float = 64.0
 ## dd-ux-v4: the slim strip between the street and the guns (pile, what just happened, pips).
 const STRIP_H: float = 56.0
 const TAP: float = 64.0
@@ -79,8 +82,18 @@ var last_event: Dictionary = {}
 ## The open sheet: {} or {"type": "gun", "index": i} / {"type": "machine", "room": i}.
 var sheet: Dictionary = {}
 ## K5: the first-run hint on screen ("" = none); hints off for debug / smoke screens.
+## ui-pass-3: the concept the callout explains now ("" = none). Callouts are on unless a test or the
+## smoke query turns them off (hints_enabled) or the player does (Settings > Tips).
 var hint_id: String = ""
 var hints_enabled: bool = true
+var _callout: Control = null
+var _concept_timer: Timer = null
+## callouts shown since the player last acted (DDConcepts.PER_MOMENT at most)
+var _moment_shown: int = 0
+var _moment_screen: int = -1
+var _title_card: Control = null
+var _map_card: Control = null
+var _map_surv: Control = null
 var last_block: String = ""
 
 var _content: MarginContainer
@@ -162,6 +175,15 @@ func _ready() -> void:
 	add_child(drag)
 	drag.hover_changed.connect(func(h: String) -> void: _drag_verdicts(drag.info, h))
 	drag.drag_finished.connect(func(_t: Dictionary) -> void: clear_kill_verdicts())
+	# ui-pass-3: the concept callout, over the street, sheets and banners, under the overlays
+	_callout = Callout.new()
+	_callout.name = "CalloutLayer"
+	add_child(_callout)
+	_callout.dismissed.connect(_on_concept_dismissed)
+	_concept_timer = Timer.new()
+	_concept_timer.one_shot = true
+	add_child(_concept_timer)
+	_concept_timer.timeout.connect(show_due_concept)
 	codex = Codex.new()
 	codex.name = "Codex"
 	add_child(codex)
@@ -182,7 +204,16 @@ func _ready() -> void:
 		_sync_feel()
 		if k == "ui_skin":
 			# dd-ui-clean: rebuild the screen in the new skin (the Settings panel rebuilds itself)
-			_render())
+			_render()
+		elif k == "tips":
+			if not bool(_v) and _callout.call("is_open"):
+				_callout.call("close_now")
+				hint_id = ""
+			_schedule_concepts())
+	# ui-pass-3: Reset tips or Tips on while a screen is up: look again once the Settings close
+	settings_panel.closed.connect(func() -> void: _schedule_concepts())
+	_inspect.closed.connect(func() -> void: _schedule_concepts())
+	codex.closed.connect(func() -> void: _schedule_concepts())
 	if OS.has_feature("web"):
 		_inspect.opened.connect(_publish_state)
 		_inspect.closed.connect(_publish_state)
@@ -191,6 +222,7 @@ func _ready() -> void:
 		codex.opened.connect(_publish_state)
 		codex.closed.connect(_publish_state)
 		codex.scrolled.connect(_publish_state)
+		_callout.dismissed.connect(func(_id: String) -> void: _publish_state())
 	var saved: String = Game.survivor_id
 	chosen_survivor = saved if Game.profile.survivor_unlocked(saved) else "rosa"
 	get_viewport().size_changed.connect(_render)
@@ -270,6 +302,16 @@ func _render() -> void:
 	_fit_base()
 	if drag != null:
 		drag.cancel()
+	if _callout != null and _callout.call("is_open"):
+		# the screen is rebuilt: the anchor goes; the concept comes back (unmarked) on the new screen
+		_callout.call("close_now")
+		hint_id = ""
+	if int(screen) != _moment_screen:
+		_moment_screen = int(screen)
+		_moment_shown = 0
+	_title_card = null
+	_map_card = null
+	_map_surv = null
 	for c: Node in _content.get_children():
 		_content.remove_child(c)
 		c.queue_free()
@@ -330,6 +372,7 @@ func _render() -> void:
 		var p: Dictionary = _auto_inspect
 		_auto_inspect = {}
 		_inspect.open.call_deferred(p)
+	_schedule_concepts()
 	if OS.has_feature("web"):
 		_publish_state.call_deferred()
 
@@ -471,7 +514,6 @@ func _build_title() -> void:
 	v.add_child(DDUi.label("DEADDRAW", 64 if portrait else 40, DDUi.accent("Z"), HORIZONTAL_ALIGNMENT_CENTER))
 	# dd-ux-clean: one line of pitch, one line of instruction
 	v.add_child(DDUi.label("Kill zombies in each gun's order. Fill the gun. Get paid.", DDUi.FONT_M if portrait else DDUi.FONT_S, DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER, true))
-	v.add_child(DDUi.label("Pick a survivor (long press to read)", DDUi.FONT_S - 2, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	if Game.discarded_old_run and not _old_note_shown:
 		var note: PanelContainer = DDUi.panel(Color("3a2a12"), 10, DDUi.WARN, 2)
 		note.add_child(DDUi.label("New rules: your old saved run can't continue. Unlocks and best scores are kept.", DDUi.FONT_S, DDUi.WARN, HORIZONTAL_ALIGNMENT_CENTER, true))
@@ -502,6 +544,8 @@ func _build_title() -> void:
 			"title": str(s.get("name", sid)), "lines": lines, "selected": sid == chosen_survivor, "dim": not unlocked,
 			"payload": DDPayloads.survivor(sid, Game.bal, Game.profile), "art_keys": Art.survivor_keys(sid)}
 		var cv: DDCardView = _view(spec, Vector2(w, card_h))
+		if sid == chosen_survivor:
+			_title_card = cv
 		cv.tapped.connect(func(_x: DDCardView) -> void:
 			if unlocked:
 				if chosen_survivor != sid:
@@ -522,7 +566,7 @@ func _build_title() -> void:
 		go.size_flags_stretch_ratio = 2.0
 		h.add_child(go)
 	v.add_child(h)
-	var how: Button = DDUi.button("How to play")
+	var how: Button = DDUi.button("Guide")
 	how.name = "HowToPlay"
 	how.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	how.pressed.connect(open_glossary)
@@ -595,7 +639,7 @@ func continue_run() -> void:
 func _start_run() -> void:
 	_confirm_abandon = false
 	_old_note_shown = true
-	Game.start_run(chosen_survivor)
+	Game.start_run(chosen_survivor, FIRST_RUN_SEED if Game.profile != null and Game.profile.first_run() else -1)
 	last_event = {}
 	sheet = {}
 	hints_enabled = true
@@ -640,7 +684,10 @@ func _build_map() -> void:
 			spec["bg_art"] = banner
 		spec["art_keys"] = Art.finale_keys(d)
 		var size: Vector2 = Vector2(vp.x - MARGIN * 2, 150) if portrait else Vector2(minf(320.0, (vp.x - MARGIN * 2 - SEP * 2) / 3.0), 170)
-		path.add_child(_view(spec, size))
+		var dv: DDCardView = _view(spec, size)
+		if di == run.district_index:
+			_map_card = dv
+		path.add_child(dv)
 	var bottom: BoxContainer = BoxContainer.new()
 	bottom.vertical = portrait
 	bottom.add_theme_constant_override("separation", SEP)
@@ -650,8 +697,9 @@ func _build_map() -> void:
 	st.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# dd-ux-clean: one tile for the survivor (HP, points); one chip for the Patches
 	var s: Dictionary = Game.bal.survivor(run.survivor_id)
-	st.add_child(_view({"kind": "S", "tag": str(s.get("name", "")).to_upper(), "title": "HP %d / %d  ·  %d pts" % [run.hp, run.max_hp, Game.bal.shown(run.points)],
-		"row": true, "title_size": DDUi.FONT_S, "payload": DDPayloads.hp(run)}, Vector2(220, 64)))
+	_map_surv = _view({"kind": "S", "tag": str(s.get("name", "")).to_upper(), "title": "HP %d / %d  ·  %d pts" % [run.hp, run.max_hp, Game.bal.shown(run.points)],
+		"row": true, "title_size": DDUi.FONT_S, "payload": DDPayloads.hp(run)}, Vector2(220, 64))
+	st.add_child(_map_surv)
 	if not run.patches.is_empty():
 		# dd-ux-equip: the Patches you wear, as their painted icons
 		st.add_child(_patch_row(run, 52.0, vp.x - MARGIN * 2 - 228.0))
@@ -683,8 +731,10 @@ func enter_district() -> void:
 func _points_spec(run: DDRun) -> Dictionary:
 	# v5 (playtest: "I first thought points were just score"): the chip shows what you can spend
 	# and, under it, the run score (every point earned; spending never lowers it)
+	# ui-pass-3: on the street the chip is only what you can spend (the score is in its tooltip and
+	# at the safehouse / run end, where it matters)
 	return {"kind": "X", "tag": "PTS", "big": str(Game.bal.shown(run.points)), "big_size": 26, "row": true, "payload": DDPayloads.points(run),
-		"lines": [[DDText.score_text(run.points_earned, Game.bal).to_lower(), DDUi.TEXT_DIM, DDUi.FONT_S - 7]]}
+		"lines": [] if screen == Screen.STREET else [[DDText.score_text(run.points_earned, Game.bal).to_lower(), DDUi.TEXT_DIM, DDUi.FONT_S - 7]]}
 
 
 ## dd-ux-clean: a tile whose content main.gd builds itself (HP panel, the prompt bar): it keeps
@@ -730,11 +780,8 @@ func _build_street() -> void:
 	var vp: Vector2 = get_viewport_rect().size
 	var W: float = vp.x - MARGIN * 2
 	var H: float = vp.y - MARGIN * 2
-	hint_id = _due_hint(run)
 	var hud: Control = _build_top(run)
-	var hint: Control = _build_hint(run) if hint_id != "" else null
-	# dd-ui-clean (head: "the tip showing makes all row cards move and resize"): the hint floats over
-	# the strip as a toast (_float_hint) and takes no layout space
+	# ui-pass-3: explanations are callouts on their own layer (dd_callout.gd): they take no layout space
 	var hint_h: float = 0.0
 	var strip_h: float = TAP if run.lookout_card() != null else STRIP_H
 	var slots: Array[int] = street_slots(run)
@@ -769,8 +816,6 @@ func _build_street() -> void:
 		var strip: Control = _build_strip(run, strip_h)
 		v.add_child(strip)
 		v.add_child(_build_guns(run, true, gun_h, W))
-		if hint != null:
-			_float_hint(hint, strip)
 	else:
 		var tall: bool = H >= 600.0
 		var lw: float = clampf(W * 0.14, 150.0, 210.0)
@@ -805,8 +850,6 @@ func _build_street() -> void:
 		mid.add_child(srow2)
 		var strip2: Control = _build_strip(run, strip_h)
 		mid.add_child(strip2)
-		if hint != null:
-			_float_hint(hint, strip2)
 		var guns: Control = _build_guns(run, false, H, rw)
 		guns.custom_minimum_size = Vector2(rw, 0)
 		h.add_child(guns)
@@ -1032,7 +1075,7 @@ func _help_button() -> Button:
 	b.pressed.connect(func() -> void:
 		if not _was_long(b):
 			open_glossary())
-	_inspectable_button(b, {"kind": "W", "title": "Help", "t1": "Help · Glossary", "t2": "Every icon in the game, one line each."})
+	_inspectable_button(b, {"kind": "W", "title": "Guide", "t1": "Guide", "t2": "Every idea in the game, explained in a sentence or two."})
 	return b
 
 
@@ -1155,8 +1198,9 @@ func _wave_door(run: DDRun, column: bool) -> DDCardView:
 	wv.name = "WaveDoor"
 	wv.tapped.connect(func(_x: DDCardView) -> void: _inspect.open(DDPayloads.waves(Game.run)))
 	var window: Control = wv.get_meta(&"window")
-	var n: int = DDPayloads.waves_waiting(run)
-	var top: Label = _anchored_label(window, "WAVE" + ("  +%d" % n if n > 0 else ""), DDUi.FONT_S - 3, DDUi.TEXT, Control.PRESET_TOP_WIDE, 4)
+	# ui-pass-3: "WAVE (of 3)" over the number reads "wave 1 of 3"; "+2" (waves waiting) read like a
+	# bonus: the waiting count is in the tooltip
+	var top: Label = _anchored_label(window, "WAVE (of %d)" % run.wave_count(), DDUi.FONT_S - 3, DDUi.TEXT, Control.PRESET_TOP_WIDE, 4)
 	top.name = "WaveTop"
 	var num: Control = Marks.WaveNumeral.new("B" if run.boss_street else str(mini(run.wave_index + 1, run.wave_count())))
 	num.name = "WaveNumeral"
@@ -1331,8 +1375,9 @@ func _room_plate(run: DDRun, i: int) -> Control:
 	row.add_child(ml)
 	if afford:
 		inner.add_child(DDUi.label("OPEN", DDUi.FONT_S - 4, DDUi.BG, HORIZONTAL_ALIGNMENT_CENTER))
-	if not open:
+	if afford:
 		# v5: what using the machine inside costs, under the door price ("+150 to use"); r2: bigger
+		# ui-pass-3: only on a door you can open now (a locked door shows one number: its price)
 		var ul: Label = DDUi.label("+%d to use" % Game.bal.shown(run.machine_min_price(i)), DDUi.FONT_S - 4, DDUi.BG if afford else DDUi.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 		ul.name = "UseCost"
 		inner.add_child(ul)
@@ -1510,9 +1555,9 @@ func _build_strip(run: DDRun, strip_h: float) -> Control:
 	var said: String = last_block if last_block != "" else str(last_event.get("text", ""))
 	if said == "" and not run.log_lines.is_empty():
 		said = run.log_lines[run.log_lines.size() - 1]
-	if run.boss_street:
-		var bl: String = "Boss: resolve every card (%d left)." % run.cards_left_to_resolve()
-		said = bl if said.begins_with("Boss:") or said == "" else bl + " " + said
+	if run.boss_street and said == "":
+		# ui-pass-3: the rule is the boss concept's job; the line keeps the count
+		said = "%d card%s left to deal with." % [run.cards_left_to_resolve(), "" if run.cards_left_to_resolve() == 1 else "s"]
 	var ll: Label = DDUi.label(said, DDUi.FONT_S - 4, DDUi.WARN if last_block != "" else DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
 	ll.name = "LastLine"
 	ll.max_lines_visible = 2
@@ -1716,7 +1761,8 @@ func _melee_tile(run: DDRun) -> DDCardView:
 
 ## Bare Hands' "no pts" under / beside the hit badge on the melee button.
 func _melee_no_pts(mv: DDCardView) -> Label:
-	var pl: Label = DDUi.label("no pts", DDUi.FONT_S - 6, DDUi.TEXT_DIM)
+	# ui-pass-3: no "no pts" line (the Melee concept and the tooltip say it)
+	var pl: Label = DDUi.label("", DDUi.FONT_S - 6, DDUi.TEXT_DIM)
 	pl.name = "MeleeUses"
 	pl.clip_text = true
 	pl.custom_minimum_size = Vector2(10, 0)
@@ -1763,7 +1809,7 @@ func _run_button(run: DDRun) -> Control:
 		rp.pressed.connect(func() -> void:
 			if not _was_long(rp):
 				do_run_past())
-		_inspectable_button(rp, run_past_payload(run))
+		_inspectable_button(rp, DDPayloads.cx(run_past_payload(run), ["run_past", "boss"]))
 		return rp
 	var why: String = run.run_block_reason()
 	var cost: int = run.run_cost()
@@ -1780,6 +1826,7 @@ func _run_button(run: DDRun) -> Control:
 		if not _was_long(rb):
 			do_run())
 	var rpl: Dictionary = DDV4Hooks.run_payload(run)
+	rpl["concepts"] = ["run"]
 	if why != "":
 		rpl["t2"] = "Not now: %s." % why
 	_inspectable_button(rb, rpl)
@@ -1800,88 +1847,219 @@ func run_past_payload(run: DDRun) -> Dictionary:
 		"body": t2, "t1": "Run past · off (you started the fight)" if why == "you already started the fight" else "Run past · off", "t2": t2}
 
 
-# ---------------------------------------------------------------- first-run hints (K5)
-func _due_hint(run: DDRun) -> String:
-	if not hints_enabled or Game.profile == null or not Game.profile.first_run() or run.phase != DDRun.Phase.STREET:
+# ---------------------------------------------------------------- concepts (ui-pass-3: explain once)
+## Waits a moment after a render (the deal and kill animations), then explains the next concept.
+func _schedule_concepts(delay: float = -1.0) -> void:
+	if _concept_timer == null or not hints_enabled or Game.profile == null or not Game.profile.tips_on():
+		return
+	if _callout.call("is_open"):
+		return
+	var d: float = delay if delay >= 0.0 else (0.35 if Game.reduce_motion() else 0.8)
+	if _concept_timer.is_inside_tree():
+		_concept_timer.start(d)
+
+
+## True when nothing else is going on: no banner, overlay, drag, end-of-street hold or finger down
+## (a callout never opens under a press in progress, so that press can't land on a button).
+func concepts_can_show() -> bool:
+	if busy or banner_open() or (_banner_layer != null and is_instance_valid(_banner_layer)):
+		return false
+	if _inspect.is_open() or codex.is_open() or settings_panel.is_open():
+		return false
+	if drag != null and drag.is_active():
+		return false
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		return false
+	return true
+
+
+## Explains the first concept on screen the player hasn't seen yet (one callout at a time).
+## Returns its id ("" = nothing to explain now). Never changes the run.
+func show_due_concept() -> String:
+	if _callout.call("is_open") or not hints_enabled or Game.profile == null or not is_inside_tree():
+		return hint_id
+	var cands: Array = concept_candidates()
+	var k: int = DDConcepts.pick(cands, Game.profile, _moment_shown)
+	if k < 0:
 		return ""
-	var order: Array[String] = ["weapon"]
-	if run.active != DDRun.MELEE and run.slot(run.active) != null:
-		order.append("rule_" + run.slot(run.active).wid)
-	for s: int in 2:
-		if run.slot(s) != null and run.slot(s).kills_left() == 1:
-			order.append("finish")
-	if int(run.stats.get("challenges", 0)) > 0:
-		order.append("challenge")
-	if int(run.stats.get("gun_kills", 0)) > 0:
-		order.append("points")
-	for i: int in run.room_count():
-		if run.can_open_room(i):
-			order.append("rooms")
-	for h: String in order:
-		if Game.profile.hint_due(h):
-			return h
-	return ""
+	if not concepts_can_show():
+		_schedule_concepts(0.5)
+		return ""
+	var id: String = str(cands[k][0])
+	var anchor: Control = cands[k][1]
+	var r: Rect2 = anchor.get_global_rect()
+	hint_id = id
+	_moment_shown += 1
+	# a press that started before the callout can't turn into a tap on a card
+	DDCardView.cancel_presses()
+	_callout.call("open", id, DDConcepts.title(id, Game.bal), DDConcepts.text(id, Game.bal), r, DDConcepts.icon(id))
+	if OS.has_feature("web"):
+		_publish_state.call_deferred()
+	return id
 
 
-func _build_hint(run: DDRun) -> Control:
-	var p: PanelContainer = DDUi.skin_panel(DDUi.panel(Color("1d2b3a"), 6, DDUi.accent("W"), 2), "hud", 12)
-	p.name = "Hint"
-	p.custom_minimum_size = Vector2(0, HINT_H)
-	var h: HBoxContainer = DDUi.hbox(6)
-	p.add_child(h)
-	h.add_child(DDUi.label("TIP", DDUi.FONT_S - 4, DDUi.accent("W")))
-	var l: Label = DDUi.label(DDText.hint_text(hint_id, run.bal), DDUi.FONT_S - 4, DDUi.TEXT, HORIZONTAL_ALIGNMENT_LEFT, true)
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(l)
-	# r2 (accessibility): a bigger Got it (>= 44 CSS px on a phone)
-	var ok: Button = DDUi.button("Got it", DDUi.PANEL_HI, DDUi.FONT_S - 1)
-	ok.name = "HintOk"
-	ok.custom_minimum_size = Vector2(104, DDUi.TAP_MIN)
-	ok.pressed.connect(dismiss_hint)
-	h.add_child(ok)
-	return p
+func _on_concept_dismissed(id: String) -> void:
+	if Game.profile != null and id != "":
+		Game.profile.mark_concept(id)
+	hint_id = ""
+	_schedule_concepts(0.25)
 
 
-## dd-ui-clean: the hint as a floating toast over the strip's event-log line, same width, centred on
-## it, with a drop shadow. It lives on the sheet layer, so nothing in the street moves or resizes when it
-## comes or goes; only the toast catches taps (Got it), everything around it still reaches the cards.
-func _float_hint(hint: Control, strip: Control) -> void:
-	# over the event-log line only: the draw pile next to it stays tappable / inspectable
-	var log_node: Control = strip.find_child("Log", true, false) as Control
-	var anchor: Control = log_node if log_node != null else strip
-	var toast: PanelContainer = PanelContainer.new()
-	toast.name = "Hint"
-	var sh: StyleBoxFlat = StyleBoxFlat.new()
-	sh.bg_color = Color(0, 0, 0, 0)
-	sh.shadow_color = Color(0, 0, 0, 0.55)
-	sh.shadow_size = 12
-	sh.shadow_offset = Vector2(0, 4)
-	sh.set_corner_radius_all(DDUi.Kit.radius(10.0))
-	toast.add_theme_stylebox_override("panel", sh)
-	toast.mouse_filter = Control.MOUSE_FILTER_STOP
-	hint.name = "HintPanel"
-	toast.add_child(hint)
-	_sheet_root.add_child(toast)
-	var place: Callable = func() -> void:
-		if not is_instance_valid(toast) or not is_instance_valid(anchor) or not anchor.is_inside_tree():
-			return
-		var r: Rect2 = anchor.get_global_rect()
-		var h: float = maxf(HINT_H, toast.get_combined_minimum_size().y)
-		var vp: Vector2 = get_viewport_rect().size
-		# centred on the log line; a taller (wrapped) tip grows upward, never down onto the gun row
-		var y: float = clampf(minf(r.position.y + (r.size.y - h) * 0.5, r.end.y - h), 0.0, maxf(0.0, vp.y - h))
-		toast.global_position = Vector2(r.position.x, y)
-		toast.size = Vector2(r.size.x, h)
-	anchor.item_rect_changed.connect(place)
-	toast.minimum_size_changed.connect(place)
-	place.call_deferred()
-
-
+## Got it on the open callout (tests, tools).
 func dismiss_hint() -> void:
-	if hint_id != "":
-		Game.profile.mark_hint(hint_id)
-		hint_id = ""
-	_queue_render()
+	if _callout.call("is_open"):
+		_callout.call("dismiss")
+
+
+## The concepts on screen now that matter for the decision in front of the player, most urgent
+## first: [[id, anchor], ...]. data/concepts.json "trigger" says each one in words.
+func concept_candidates() -> Array:
+	var out: Array = []
+	var run: DDRun = Game.run
+	match screen:
+		Screen.TITLE:
+			out.append(["inspect", _title_card])
+		Screen.MAP:
+			out.append(["district", _map_card])
+			if run != null and run.passive != "":
+				out.append(["passive_" + run.passive, _map_surv])
+		Screen.STREET:
+			if run != null:
+				_street_concepts(run, out)
+		Screen.SAFEHOUSE:
+			if run != null:
+				_safehouse_concepts(out)
+		Screen.END:
+			out.append(["score", _screen_title])
+	return out.filter(func(c: Array) -> bool:
+		return c[1] != null and is_instance_valid(c[1]) and (c[1] as Control).is_visible_in_tree())
+
+
+func _street_concepts(run: DDRun, out: Array) -> void:
+	var sheet_panel: Control = _sheet_root.find_child("Sheet", true, false) as Control
+	if sheet_panel != null:
+		var kind: String = "patch" if not run.pending_patch.is_empty() else str(sheet.get("type", ""))
+		match kind:
+			"gun":
+				out.append(["gun_card", sheet_panel])
+				for s: int in 2:
+					if run.slot(s) != null and not run.slot(s).stack.is_empty():
+						out.append(["salvage", sheet_panel])
+						break
+			"machine":
+				var mk: String = str(run.machine(int(sheet.get("room", 0))).get("kind", ""))
+				out.append([{"wall": "wall_rack", "bench": "bench", "patch": "patch_press"}.get(mk, "machine_use"), sheet_panel])
+			"patch", "patches":
+				out.append(["patches", sheet_panel])
+			"room_confirm":
+				out.append(["rooms", sheet_panel])
+			"melee":
+				out.append(["melee_weapon", sheet_panel])
+		return
+	var views: Array = []
+	for cid: Variant in _street_order:
+		if _street_views.has(cid):
+			views.append([_street_cards[cid], _street_views[cid]])
+	var streets: int = int(run.stats.get("streets", 0))
+	var active_view: Control = _melee_view if run.active == DDRun.MELEE else _gun_views[run.active]
+	var g_act: DDGun = run.slot(run.active) if run.active != DDRun.MELEE else null
+	if run.boss_street:
+		for cv: Array in views:
+			if (cv[0] as DDCard).is_boss():
+				out.append(["boss", cv[1]])
+				out.append(["boss_" + (cv[0] as DDCard).boss_trait, cv[1]])
+				break
+		var rp: Button = _content.find_child("RunPast", true, false) as Button
+		if rp != null and not rp.disabled:
+			out.append(["run_past", rp])
+	out.append(["street", _content.find_child("StreetGrid", true, false)])
+	out.append(["active_weapon", active_view])
+	var zv: Control = null
+	var hurt: Control = null
+	var locked: Control = null
+	for cv2: Array in views:
+		var c: DDCard = cv2[0]
+		if c.kind != DDCard.ZOMBIE or c.is_boss():
+			continue
+		var spec: Dictionary = _street_specs.get(c.get_instance_id(), {})
+		if zv == null:
+			zv = cv2[1]
+		if hurt == null and str(spec.get("badge", "")).begins_with("-"):
+			hurt = cv2[1]
+		if locked == null and str(spec.get("lock", "")) != "":
+			locked = cv2[1]
+	out.append(["damage", hurt])
+	if g_act != null:
+		out.append([DDConcepts.rule_id(g_act.rule), active_view])
+		if run.steady() and g_act.rule in ["down", "up"]:
+			out.append(["passive_steady_hands", active_view])
+	if locked != null:
+		out.append(["rule_lock", locked])
+		out.append(["rules", active_view])
+		out.append(["melee", _melee_view])
+	for s2: int in 2:
+		var g: DDGun = run.slot(s2)
+		var gv: DDGunView = _gun_views[s2]
+		if g == null or gv == null:
+			continue
+		if not g.stack.is_empty():
+			out.append(["gun_slots", gv])
+			out.append(["challenge", gv.chal_line if gv.chal_line != null else gv])
+		if g.kills_left() == 1:
+			out.append(["fill_gun", gv])
+		if str(run.bal.weapon_reward(g.wid)[0]) == "encore":
+			out.append(["encore", gv])
+		if run.slot_mod(s2) != "":
+			out.append(["gun_mod", gv])
+			out.append(["mod_" + run.slot_mod(s2), gv])
+	if run.points_earned > 0:
+		out.append(["points", _points_view])
+	out.append(["zombie", zv])
+	for cv3: Array in views:
+		var c3: DDCard = cv3[0]
+		if c3.holdover:
+			out.append(["holdover", cv3[1]])
+		match c3.kind:
+			DDCard.MEDKIT:
+				out.append(["medkit", cv3[1]])
+			DDCard.COVER:
+				out.append(["cover", cv3[1]])
+			DDCard.WEAPON:
+				out.append(["gun_card", cv3[1]])
+				out.append(["capacity", cv3[1]])
+			DDCard.MELEE:
+				out.append(["melee_weapon", cv3[1]])
+	if run.hp < run.max_hp:
+		out.append(["hp", _hp_anchor])
+	if run.cover > 0:
+		out.append(["cover_hud", _cover_view])
+	if not run.patches.is_empty():
+		out.append(["patches", _content.find_child("PatchesChip", true, false)])
+	for i: int in _room_views.size():
+		if not run.room_open[i] and run.can_open_room(i):
+			out.append(["room_open", _room_views[i]])
+			break
+	if run.points > 0 and not _room_views.is_empty():
+		out.append(["rooms", _room_views[0]])
+	for i2: int in _room_views.size():
+		if run.room_open[i2]:
+			out.append(["machine_use", _room_views[i2]])
+			break
+	if streets >= 1:
+		out.append(["pile", _pile_view])
+		out.append(["waves", _wave_views[0] if not _wave_views.is_empty() else null])
+		var rb: Button = _content.find_child("Run", true, false) as Button
+		if rb != null and not rb.disabled:
+			out.append(["run", rb])
+	if streets >= 2:
+		out.append(["melee", _melee_view])
+
+
+func _safehouse_concepts(out: Array) -> void:
+	out.append(["safehouse", _screen_title])
+	out.append(["free_patch", _content.find_child("BossPatch_*", true, false)])
+	out.append(["gun_mod", _content.find_child("ModPanel", true, false)])
+	out.append(["score", _points_view])
 
 
 # ---------------------------------------------------------------- sheets (gun card, machines, Patch pick)
@@ -2828,15 +3006,14 @@ func _finish(ev: Dictionary, fx: Dictionary) -> void:
 	last_event = ev
 	last_block = ""
 	confirm_lethal = ""
-	# a hint is learned once the player acts with it on screen (or taps Got it)
-	if hint_id != "":
-		Game.profile.mark_hint(hint_id)
 	_pending_fx = fx
 	_after_event(ev)
 
 
 func _after_event(ev: Dictionary) -> void:
 	var run: DDRun = Game.run
+	# ui-pass-3: the player acted: the next concepts may be explained
+	_moment_shown = 0
 	var waves: Array = ev.get("waves", [])
 	if not waves.is_empty():
 		var info: Dictionary = waves[waves.size() - 1]
@@ -2896,6 +3073,7 @@ func dismiss_banner() -> void:
 		_banner_layer.queue_free()
 	_banner_layer = null
 	_banner = null
+	_schedule_concepts(0.3)
 	# the wave numeral lands on its final value even when the banner was skipped
 	for wv: Variant in _wave_views:
 		if wv != null and is_instance_valid(wv) and (wv as Node).has_meta(&"numeral"):
@@ -3157,7 +3335,6 @@ func _build_safehouse() -> void:
 	v.add_child(head)
 	# dd-ux-clean: one plain line, then your kit as small inspectable tiles, then the choices.
 	# v4: points don't come along; the Safehouse Shop is where they are spent.
-	v.add_child(DDUi.label("+%d HP when you leave. Guns, Gun Mods and Patches come with you." % run.safehouse_heal(), DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 
 	var kit: HFlowContainer = HFlowContainer.new()
 	kit.alignment = FlowContainer.ALIGNMENT_CENTER
@@ -3165,7 +3342,8 @@ func _build_safehouse() -> void:
 	kit.add_theme_constant_override("v_separation", SEP)
 	v.add_child(kit)
 	kit.add_child(_view({"kind": "S", "tag": "HP", "big": "%d/%d" % [run.hp, run.max_hp], "big_size": 22, "row": true, "payload": DDPayloads.hp(run)}, Vector2(120, 56)))
-	kit.add_child(_view(_points_spec(run), Vector2(120, 56)))
+	_points_view = _view(_points_spec(run), Vector2(120, 56))
+	kit.add_child(_points_view)
 	for s: int in 2:
 		var g: DDGun = run.slot(s)
 		kit.add_child(_view({"kind": "W", "tag": "GUN %d" % (s + 1), "title": g.name if g != null else "empty", "row": true, "title_size": DDUi.FONT_S - 2,
@@ -3237,8 +3415,6 @@ func _mod_panel(run: DDRun) -> Control:
 	skip.size_flags_horizontal = Control.SIZE_FILL
 	skip.custom_minimum_size = Vector2(96, 48)
 	head.add_child(skip)
-	if portrait:
-		box.add_child(DDUi.label("Every gun you put in that slot gets it, for the rest of the run.", DDUi.FONT_S - 4, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	var row: BoxContainer = BoxContainer.new()
 	row.vertical = portrait
 	row.add_theme_constant_override("separation", SEP)
@@ -3626,6 +3802,8 @@ func _publish_state() -> void:
 	var st: Dictionary = {"screen": screen_name(), "portrait": portrait, "items": items, "inspect": _inspect.is_open(),
 		"settings": settings_panel.is_open(), "fx": feedback.last_played, "banner": last_banner, "banner_open": banner_open(),
 		"banner_rect": _css_rect(_banner, xf, dpr) if banner_open() else {}, "saved": Game.has_saved_run(), "hint": hint_id,
+		"callout": _css_rect(_callout.get("bubble"), xf, dpr) if _callout.call("is_open") and _callout.get("bubble") != null else {},
+		"seen": Game.profile.data.get("concepts_seen", []) if Game.profile != null else [],
 		"sheet": str(sheet.get("type", "")) if Game.run == null or Game.run.pending_patch.is_empty() else "patch", "block": last_block,
 		"overlay": str(codex.get("mode")) if codex.is_open() else "", "tip": _inspect.last_lines if _inspect.is_open() else [],
 		"vw": get_viewport_rect().size.x, "vh": get_viewport_rect().size.y}

@@ -2,7 +2,8 @@
 # Purpose: The overlay opened by right click / long press on anything inspectable.
 #   dd-ux-v4 (head's M3 b): a 2-line tooltip: payload "t1" (bold: what it is and its numbers now)
 #   and "t2" (what it does for you), next to a small picture of the thing. The full rules live
-#   only in the Glossary and the Codex. A payload with "list": true (the history, how to play)
+#   only in the Glossary and the Codex. ui-pass-3: payload "concepts" (DDConcepts ids) adds the idea
+#   behind the thing in full under the two lines (2 on a short screen, else 3). A payload with "list": true (the history, how to play)
 #   keeps the long layout with its "body".
 #   payload: {kind, tag, title, big, body, art?: Texture2D, extra_cards?: [payload...]} - tap anywhere
 #   or Esc to close. dd-feel: the zoom pops in (fades only with reduce motion).
@@ -33,6 +34,8 @@ const ArtLib: GDScript = preload("res://scripts/ui/dd_art.gd")
 
 ## The two lines the last tooltip showed (tests).
 var last_lines: PackedStringArray = []
+## ui-pass-3: the concepts the last tooltip explained (tests).
+var last_concepts: Array = []
 
 
 func open(payload: Dictionary) -> void:
@@ -292,6 +295,24 @@ func _open_tip(payload: Dictionary) -> void:
 				hb.add_child(tr2)
 			hb.add_child(DDUi.label(str(d.get("text", "")), DDUi.FONT_S - 2, Color(d.get("color", DDUi.TEXT))))
 			fl.add_child(hb)
+	# ui-pass-3: the ideas behind it, in full: the same words as its first-time callout and the Guide
+	var cids: Array = payload.get("concepts", [])
+	last_concepts = []
+	if not cids.is_empty():
+		var cbox: VBoxContainer = DDUi.vbox(3)
+		cbox.name = "Concepts"
+		cbox.custom_minimum_size = Vector2(tw, 0)
+		v.add_child(cbox)
+		var line: ColorRect = ColorRect.new()
+		line.color = Color(DDUi.TEXT_DIM, 0.35)
+		line.custom_minimum_size = Vector2(tw, 1)
+		cbox.add_child(line)
+		for id: Variant in cids.slice(0, 2 if vp.y < 520.0 else 3):
+			var cl: Label = DDUi.label("%s: %s" % [DDConcepts.title(str(id)), DDConcepts.text(str(id))], DDUi.FONT_S - 3, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_LEFT, true)
+			cl.name = "Concept_" + str(id)
+			cl.custom_minimum_size = Vector2(tw, 0)
+			cbox.add_child(cl)
+			last_concepts.append(str(id))
 	last_lines = PackedStringArray([t1, t2])
 	DDUi.ignore_mouse(root)
 	visible = true

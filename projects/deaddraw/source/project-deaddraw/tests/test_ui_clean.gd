@@ -115,7 +115,8 @@ func test_street_clean_in_every_orientation() -> void:
 			check(_tile(m, 300 + w) == null, tag + " no separate wave deck %d" % (w + 1))
 		var wt: DDCardView = _tile(m, 300)
 		check(str(wt.payload.get("t1", "")).contains("Wave 1 of 3") and str(wt.payload.get("t2", "")).contains("Next wave"), tag + " wave tooltip: " + str(wt.payload.get("t1", "")))
-		check(wt.big_label != null and wt.big_label.text.contains("+2"), tag + " wave door shows the waves waiting: " + (wt.big_label.text if wt.big_label != null else ""))
+		# ui-pass-3: "WAVE (of 3)" over the big number (the "+2 waiting" read like a bonus; it is in the tooltip)
+		check(wt.big_label != null and wt.big_label.text.contains("of 3"), tag + " wave door says how many waves: " + (wt.big_label.text if wt.big_label != null else ""))
 		var num: Control = wt.get_meta(&"numeral") if wt.has_meta(&"numeral") else null
 		check(num != null and str(num.get("text")) == "1", tag + " the big wave number on the wave door")
 		# rooms: the price on the padlock plate, with how much is missing in its tooltip

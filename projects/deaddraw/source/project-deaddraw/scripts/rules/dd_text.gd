@@ -519,31 +519,6 @@ static func boss_words_short(b: Dictionary) -> String:
 
 
 # ---------------------------------------------------------------- first-run hints (K5)
-static func hint_text(id: String, bal: DDBalance) -> String:
-	# dd-ux-clean: first-run hints, one short sentence each
-	if id.begins_with("rule_"):
-		var wid: String = id.trim_prefix("rule_")
-		return "%s: each kill %s. %d kills fill it." % [bal.weapon_name(wid), rule_short(bal.weapon_rule(wid)), bal.weapon_cap(wid)]
-	match id:
-		"weapon":
-			return "Tap a weapon below, then a zombie. The red chip is the HP you lose."
-		"points":
-			return "Gun kills pay points. Melee pays nothing."
-		"finish":
-			return "One more kill fills this gun: +%d, then equip the next one." % bal.shown(bal.num("finish_bonus"))
-		"challenge":
-			return "Challenge met! Long press a gun to read it."
-		"rooms":
-			return "You can afford a room: tap its gold OPEN plate."
-		"run":
-			if bal.text("run_return") == "bottom":
-				return "Bad street? RUN: -%d HP, its cards go to the bottom of the pile." % bal.num("run_damage")
-			return "Bad street? RUN: -%d HP, its cards go back into the pile." % bal.num("run_damage")
-		"melee":
-			return "Bare Hands: strength %d. A melee weapon is stronger until its uses run out." % bal.num("hands_power")
-	return ""
-
-
 ## dd-ux-clean: the rule as a short label for the gun tile (icon + label; full text on inspect).
 static func rule_tag(rule: String, rosa: bool = false) -> String:
 	match rule:

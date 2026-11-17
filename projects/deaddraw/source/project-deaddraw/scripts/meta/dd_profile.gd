@@ -9,6 +9,9 @@
 #   browser's prefers-reduced-motion).
 #   v3 (K5): first-run hints. data.hints_seen lists the hint ids already shown; hints only show
 #   while no run has ended yet (data.runs == 0), each one once.
+#   ui-pass-3: data.concepts_seen lists the concepts already explained (DDConcepts: each one once,
+#   the first time it is on screen); setting "tips" turns the explanations off; reset_concepts()
+#   ("Reset tips") clears the list. This replaced the first-run hints (data.hints_seen is kept, unused).
 #   dd-ux-v4: data.codex_met lists the Codex entries the player has met (an additive key: older
 #   saves load with it empty; the save version is unchanged).
 #   v3 (save version 3): v3 "Kill Stacks" scores aren't comparable with v2's, so a version-2 save
@@ -28,7 +31,7 @@ const DEFAULT_PATH: String = "user://deaddraw_profile.json"
 const VERSION: int = 3
 ## dd-feel: Settings keys and their defaults (types are enforced on load and on set).
 const SETTING_DEFAULTS: Dictionary = {"master_volume": 0.8, "sfx_volume": 0.8, "screen_shake": true,
-	"reduce_motion": false, "motion_chosen": false, "ui_skin": ""}
+	"reduce_motion": false, "motion_chosen": false, "ui_skin": "", "tips": true}
 
 var path: String = DEFAULT_PATH
 var bal: DDBalance
@@ -48,7 +51,7 @@ func _init(balance: DDBalance = null, save_path: String = DEFAULT_PATH, save_mir
 
 func reset() -> void:
 	data = {"version": VERSION, "cleared": [], "unlocked_perks": [], "unlocked_survivors": [],
-		"best": {}, "best_v1": {}, "best_v2": {}, "badges": {}, "runs": 0, "wins": 0, "hints_seen": [], "codex_met": [], "settings": SETTING_DEFAULTS.duplicate()}
+		"best": {}, "best_v1": {}, "best_v2": {}, "badges": {}, "runs": 0, "wins": 0, "hints_seen": [], "concepts_seen": [], "codex_met": [], "settings": SETTING_DEFAULTS.duplicate()}
 
 
 func load_profile() -> bool:
@@ -74,7 +77,7 @@ func load_profile() -> bool:
 		# v1 run scores (10 + HP per district) are not comparable with v2 points
 		data["best_v1"] = data["best"] if data["best"] is Dictionary else {}
 		data["best"] = {}
-	for k: String in ["cleared", "unlocked_perks", "unlocked_survivors", "hints_seen", "codex_met"]:
+	for k: String in ["cleared", "unlocked_perks", "unlocked_survivors", "hints_seen", "concepts_seen", "codex_met"]:
 		if not data[k] is Array:
 			data[k] = []
 	if from_version == 2:
@@ -208,21 +211,33 @@ func unlock_milestone_for(kind_id: String) -> String:
 	return ""
 
 
-# ---------------------------------------------------------------- first-run hints (K5)
+# ---------------------------------------------------------------- concepts (ui-pass-3)
 ## True while this is the player's first run (no run has ended yet).
 func first_run() -> bool:
 	return int(data.get("runs", 0)) == 0
 
 
-## Should hint `id` show now? (first run only, each hint once)
-func hint_due(id: String) -> bool:
-	return first_run() and not (data["hints_seen"] as Array).has(id)
+## The "Tips" setting: explain each concept the first time it shows up.
+func tips_on() -> bool:
+	return bool(setting("tips"))
 
 
-func mark_hint(id: String) -> void:
-	if not (data["hints_seen"] as Array).has(id):
-		(data["hints_seen"] as Array).append(id)
+func concept_seen(id: String) -> bool:
+	return (data["concepts_seen"] as Array).has(id)
+
+
+## Marks a concept as explained (saved at once, so a reload never repeats it).
+func mark_concept(id: String) -> void:
+	if not (data["concepts_seen"] as Array).has(id):
+		(data["concepts_seen"] as Array).append(id)
 		save()
+
+
+## "Reset tips": every concept is explained again the next time it shows up.
+func reset_concepts() -> void:
+	data["concepts_seen"] = []
+	data["hints_seen"] = []
+	save()
 
 
 # ---------------------------------------------------------------- recording

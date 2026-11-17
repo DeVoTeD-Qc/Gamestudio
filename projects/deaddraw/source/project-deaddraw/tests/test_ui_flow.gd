@@ -112,28 +112,38 @@ func test_street_layout_and_flow_portrait_and_landscape() -> void:
 		await _settle()
 		eq(m.call("screen_name"), "STREET", tag + " street")
 		var run: DDRun = game.get("run")
-		# K5: first-run hint (pick a weapon then tap zombies)
-		eq(str(m.get("hint_id")), "weapon", tag + " first hint: pick a weapon, tap zombies")
-		check(_named(m, "Hint") != null, tag + " hint shown")
-		# dd-ui-clean: the hint is a floating toast: it takes no layout space, so no card moves or
-		# resizes when it comes or goes, and it never covers the gun row or the draw pile
-		var hint_c: Control = _named(m, "Hint") as Control
+		# ui-pass-3: the concepts are explained one at a time, each anchored to its thing, as a
+		# callout on its own layer: nothing in the street moves or resizes when it comes or goes,
+		# and the bubble never covers what it explains
 		var c0: Rect2 = _view_idx(m, 0).get_global_rect()
 		var gun_r: Rect2 = _view_idx(m, 200).get_global_rect()
-		var pile_r: Rect2 = _view_idx(m, 400).get_global_rect()
-		if hint_c != null:
-			var hr: Rect2 = hint_c.get_global_rect()
-			var vps: Vector2 = m.get_viewport_rect().size
-			check(hr.end.y <= vps.y + 1 and hr.position.y >= -1, tag + " hint toast on screen (%s in %s)" % [str(hr), str(vps)])
-			check(not hr.grow(-1).intersects(gun_r), tag + " hint toast clear of the gun row")
-			check(not hr.grow(-1).intersects(pile_r), tag + " hint toast clear of the draw pile")
+		m.call("dismiss_banner")
+		eq(str(m.call("show_due_concept")), "street", tag + " first concept: the street")
+		var co: Control = m.get("_callout")
+		var bub: Control = co.get("bubble")
+		await _settle()
+		var vps: Vector2 = m.get_viewport_rect().size
+		var br: Rect2 = bub.get_global_rect()
+		check(br.position.x >= -1 and br.position.y >= -1 and br.end.x <= vps.x + 1 and br.end.y <= vps.y + 1, tag + " callout on screen (%s in %s)" % [str(br), str(vps)])
 		m.call("dismiss_hint")
 		await _settle()
-		check(str(m.get("hint_id")).begins_with("rule_"), tag + " next hint: the active gun's rule (%s)" % str(m.get("hint_id")))
+		eq(str(m.call("show_due_concept")), "active_weapon", tag + " next: pick a weapon, then a zombie")
+		await _settle()
+		br = (co.get("bubble") as Control).get_global_rect()
+		check(not br.grow(-1).intersects(gun_r), tag + " the weapon callout doesn't cover the gun it explains")
 		m.call("dismiss_hint")
 		await _settle()
-		eq(_view_idx(m, 0).get_global_rect(), c0, tag + " street card unmoved when the hint goes")
-		eq(_view_idx(m, 200).get_global_rect(), gun_r, tag + " gun unmoved when the hint goes")
+		eq(str(m.call("show_due_concept")), "damage", tag + " next: the damage chip")
+		m.call("dismiss_hint")
+		await _settle()
+		eq(str(m.call("show_due_concept")), "", tag + " at most %d in a row before the player acts" % DDConcepts.PER_MOMENT)
+		var prof: DDProfile = game.get("profile")
+		check(prof.concept_seen("street") and prof.concept_seen("active_weapon") and prof.concept_seen("damage"), tag + " the three are marked seen")
+		eq(_view_idx(m, 0).get_global_rect(), c0, tag + " street card unmoved by the callouts")
+		eq(_view_idx(m, 200).get_global_rect(), gun_r, tag + " gun unmoved by the callouts")
+		# (a fresh layout, without the deal's wave door animation)
+		m.call("_render")
+		await _settle()
 		_all_inspectable_and_on_screen(m, tag + " street")
 		# the head's layout
 		var w1: DDCardView = _view_idx(m, 300)
@@ -410,7 +420,7 @@ func test_long_names_shrink_to_fit() -> void:
 	await tree.process_frame
 
 
-func test_hints_only_on_the_first_run() -> void:
+func test_concepts_after_the_first_run_and_tips_off() -> void:
 	var game: Node = tree.root.get_node_or_null("Game")
 	tree.root.size = Vector2i(390, 844)
 	var m: Control = _main()
@@ -420,7 +430,12 @@ func test_hints_only_on_the_first_run() -> void:
 	m.call("_start_run")
 	m.call("enter_district")
 	await _settle()
-	eq(str(m.get("hint_id")), "", "no hints after the first run")
+	# ui-pass-3: concepts are explained the first time they show up, whatever the run; Tips off stops them
+	m.call("dismiss_banner")
+	eq(str(m.call("show_due_concept")), "street", "concepts still explain after the first run")
+	m.call("dismiss_hint")
+	prof.set_setting("tips", false)
+	eq(str(m.call("show_due_concept")), "", "Tips off: no callouts")
 	m.queue_free()
 	await tree.process_frame
 	_cleanup()

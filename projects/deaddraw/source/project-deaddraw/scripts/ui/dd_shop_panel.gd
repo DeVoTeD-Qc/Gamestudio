@@ -52,7 +52,6 @@ func rebuild() -> void:
 		return
 	var b: DDBalance = run.bal
 	add_child(DDUi.label("SAFEHOUSE SHOP · you have %d pts" % b.shown(run.points), DDUi.FONT_M, DDUi.accent("X"), HORIZONTAL_ALIGNMENT_CENTER, true))
-	add_child(DDUi.label(DDText.shop_text(b), DDUi.FONT_S - 3, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
 	if bool(st["waiting_for_boss_patch"]):
 		add_child(DDUi.label("Pick your free Patch first.", DDUi.FONT_S - 2, DDUi.WARN, HORIZONTAL_ALIGNMENT_CENTER, true))
 		return
