@@ -157,7 +157,7 @@ func _init() -> void:
 	_overlay.name = "Overlay"
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_overlay)
-	_overlay.draw.connect(_draw_overlay)
+	_overlay.draw.connect(_draw_overlay_all)
 	for c: Control in [_art, _overlay]:
 		c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	resized.connect(_overlay.queue_redraw)
@@ -194,6 +194,25 @@ func show_incoming(revealed_name: String = "") -> void:
 	revealed = revealed_name
 	_clear_art()
 	_refresh()
+
+
+## kc-feedback (head: "the UAV should show the exact cards, not just the name"): a rival play your
+## recon revealed (Recon Drone, Callout, Recon Specialist, Floodlights), shown as the real card face
+## (art, cost, FP / Armor, keywords) in its landing slot, with a red dashed frame and a SPOTTED tag.
+func show_spotted(unit: Dictionary) -> void:
+	var e: Dictionary = unit.duplicate()
+	e["spotted"] = true
+	mode = Mode.UNIT
+	entry = e
+	side = &"enemy"
+	is_front = false
+	revealed = String(unit.get("name", ""))
+	_set_art(StringName(String(e.get("banner", e.get("art", "")))), e)
+	_refresh()
+
+
+func is_spotted() -> bool:
+	return mode == Mode.UNIT and bool(entry.get("spotted", false))
 
 
 ## Landing preview of the selected card: its full banner at 50%, dashed outline.
@@ -389,7 +408,8 @@ func _draw_incoming_back(r: Rect2) -> void:
 ## True while the cost hex shows: hovered or held (peek), a hand card (full_info),
 ## or Settings > Cards > "Always show all card info" (show_all).
 func is_peeking() -> bool:
-	return peek or full_info or show_all
+	# kc-feedback: a SPOTTED rival card shows its cost too (the whole card: cost, FP, Armor, keywords).
+	return peek or full_info or show_all or is_spotted()
 
 
 ## The synergy rail's highlight: this card has the focused trait.
@@ -427,6 +447,35 @@ const HANDICAP_GREEN: Color = Color("#5FBF4A")
 func _backing(o: Control, r: Rect2, radius: float = 3.0) -> void:
 	backing_rects.append(r)
 	CardLook.draw_chip(o, r, radius)
+
+
+func _draw_overlay_all() -> void:
+	_draw_overlay()
+	if is_spotted():
+		_draw_spotted_tag(_overlay)
+
+
+## kc-feedback: SPOTTED card: a dashed rival-red frame (not yet on the board) and a SPOTTED tag top-centre.
+func _draw_spotted_tag(o: Control) -> void:
+	var r: Rect2 = Rect2(Vector2.ZERO, size).grow(-1.0)
+	var red: Color = _col(&"enemy")
+	var dash: float = 7.0
+	for edge: Array in [[r.position, Vector2(r.end.x, r.position.y)], [Vector2(r.end.x, r.position.y), r.end],
+			[r.end, Vector2(r.position.x, r.end.y)], [Vector2(r.position.x, r.end.y), r.position]]:
+		var a: Vector2 = edge[0]
+		var b: Vector2 = edge[1]
+		var n: int = maxi(1, int(a.distance_to(b) / dash))
+		for i: int in n:
+			if i % 2 == 0:
+				o.draw_line(a.lerp(b, float(i) / n), a.lerp(b, float(i + 1) / n), red, 2.0)
+	var font: Font = get_theme_font(&"font", &"HudHeader")
+	var fs: int = clampi(int(size.y * 0.26), 12, 18)
+	var text: String = "SPOTTED"
+	var tw: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var tag: Rect2 = Rect2((size.x - tw) * 0.5 - 6.0, 0.0, tw + 12.0, fs + 4.0)
+	o.draw_rect(tag, Color(red, 0.92))
+	o.draw_string(font, Vector2(tag.position.x + 6.0, tag.position.y + 2.0 + font.get_ascent(fs)), text,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
 
 
 func _draw_overlay() -> void:

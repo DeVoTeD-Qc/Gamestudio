@@ -177,7 +177,7 @@ func _script_events() -> Array:
 			"hits": [{"uid": 23, "side": &"enemy", "amount": 3, "remaining": 0, "name": "Rifleman"},
 				{"uid": 24, "side": &"enemy", "amount": 3, "remaining": 3, "name": "Gunner"}]}))
 	_mark("streak", e)
-	e.append(_ev(RulesEvent.ZONE_CONTROL, {"zone": &"mid", "owner": &"player"}))
+	e.append(_ev(RulesEvent.ZONE_CONTROL, {"zone": &"mid", "owner": &"player", "points": 1}))
 	e.append(_ev(RulesEvent.MODE_SCORED, {"mode": &"zone_control", "player_gained": 2, "enemy_gained": 1, "player_score": 3, "enemy_score": 2, "target": 6}))
 	e.append(_ev(RulesEvent.STREAK_CHANGED, {"side": &"player", "streak": 2, "before": 1, "gained": 1, "reset": false, "earned": [&"recon_drone"]}))
 	e.append(_ev(RulesEvent.KILLSTREAK_EARNED, {"side": &"player", "item_id": &"recon_drone", "streak": 2, "threshold": 2}))

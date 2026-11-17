@@ -59,6 +59,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 			"control": _control_id(state.control_of(z), viewer),
 			"incoming": dots[z] if z < dots.size() else 0,
 			"revealed": revealed_names(state, viewer, z),
+			"spotted": spotted_cards(state, viewer, z),
 			"friendly": friendly, "enemy": enemy,
 			"fp_player": fp_me, "fp_enemy": fp_foe,
 			"fields": _fields(state, viewer, z, fields),
@@ -85,7 +86,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		"round_cap": mode_rules.round_cap if mode_rules != null else state.config.round_cap,
 		"phase": String(MatchState.PHASE_NAMES[state.phase]).to_upper(),
 		"score_player": me.score, "score_enemy": foe.score,
-		# kc-clarity: the match's target score (always on the SCORE badge: "TO 6").
+		# kc-clarity: the match's target score (kc-feedback: the score race over the board, "TO 6").
 		"target": mode_rules.target if mode_rules != null else 0,
 		"enemy_name": foe.setup.display_name.to_upper(),
 		"supply": me.supply, "supply_max": state.config.supply_for_round(state.round_number),
@@ -104,8 +105,7 @@ static func build(state: MatchState, map: MapData, viewer: int = MatchState.PLAY
 		"result": state.result,
 		# kc-syn-ui: links, trait rail and set tiers of both sides (viewer-relative keys).
 		"synergy": synergy_block(state, viewer),
-		# kc-onboard-ui: who holds initiative this round and why; what the progressive reveal shows.
-		"initiative": initiative_info(state, viewer),
+		# kc-onboard-ui: what the progressive reveal shows.
 		"reveal": reveal_info(state),
 	}
 	var ks: Array = []
@@ -153,8 +153,8 @@ static func can_move(state: MatchState, viewer: int, u: RulesUnit) -> bool:
 		return false
 	if u.is_operator and state.projected_operator_zone(viewer) != u.zone:
 		return false  # it already has a Rotate order this round (the order shows where it goes)
-	for z: int in [u.zone - 1, u.zone + 1]:
-		if not state.is_zone(z):
+	for z: int in MatchState.ZONE_COUNT:  # kc-fair: any other column
+		if z == u.zone:
 			continue
 		var intent: Dictionary = RulesIntent.rotate(z) if u.is_operator else RulesIntent.move_unit(u.uid, z)
 		if bool(state.can_submit(viewer, intent)["ok"]):
@@ -308,6 +308,44 @@ static func revealed_names(state: MatchState, viewer: int, zone: int) -> Array:
 			continue
 		var card: CardData = CardDB.get_card(id) if CardDB != null else null
 		out.append(card.display_name if card != null else String(id).capitalize())
+	return out
+
+
+## kc-feedback (head: "the UAV should show the exact cards, not just the name"): the same revealed plays
+## as revealed_names(), as card entries (art, cost, FP, Armor, keywords: the board banner's fields) so the
+## board shows the real cards. One per revealed dot, in play order; [] while unrevealed.
+static func spotted_cards(state: MatchState, viewer: int, zone: int) -> Array:
+	var out: Array = []
+	if state.revealed_red_dots(viewer, zone).is_empty():
+		return out
+	var foe: RulesSide = state.sides[1 - viewer]
+	var op_hidden: bool = foe.has_flag(DataEnums.EffectKind.HIDE_FROM_INTEL, state.round_number)
+	for play: Dictionary in foe.plays:
+		if int(play["zone"]) != zone:
+			continue
+		var kind: StringName = play["kind"]
+		if kind == &"unit":
+			var rc: RulesCard = play["card"]
+			var e: Dictionary = {"uid": rc.uid, "name": rc.card.display_name, "card_id": rc.card.id,
+					"cls": String(CardInfo.CLASS_WORDS.get(rc.card.weapon_class, "")).to_upper(),
+					"fp": rc.card.firepower, "armor": rc.card.armor, "armor_max": rc.card.armor,
+					"keywords": CardInfo.icon_keywords(CardInfo.keywords(rc.card)), "art": art_key_of_card(rc.card)}
+			_banner_fields(e, rc.card, null, foe, state, rc.uid)
+			e["trait"] = String(rc.card_trait())
+			StandardIssueLook.dress(e, rc.card, StringName(e.get("banner", "")), true)
+			out.append(e)
+		elif kind == &"agile":
+			var mover: RulesUnit = foe.find_unit(int(play["target_uid"]))
+			if mover != null:
+				var me: Dictionary = unit_entry(state, mover, foe)
+				me["card_id"] = mover.source_id
+				out.append(me)
+		elif kind in [&"place", &"rotate"] and not op_hidden and foe.operator_unit != null:
+			var oe: Dictionary = unit_entry(state, foe.operator_unit, foe)
+			oe["card_id"] = foe.operator_unit.source_id
+			if kind == &"place":
+				oe["armor"] = foe.operator_unit.max_armor(state.round_number)
+			out.append(oe)
 	return out
 
 
@@ -530,60 +568,11 @@ static func _short(display_name: String) -> String:
 
 
 # =============================================================================
-# kc-onboard-ui: initiative this round, progressive reveal
+# kc-onboard-ui: progressive reveal (kc-fair: the initiative block is gone, nobody goes first)
 # =============================================================================
 
-## Words for the initiative tie rule (ModeRules.tiebreak; another agent may tune it).
-const TIE_RULE_WORDS: Dictionary = {
-	&"player": "ties go to you", &"enemy": "ties go to the rival",
-	&"alt": "ties alternate: odd rounds you, even rounds the rival",
-	&"other": "ties go to whoever didn't have it last round (round 1: you)",
-	&"coin": "round 1 is a coin flip, then ties go to whoever didn't have it last round",
-	&"random": "ties are a coin flip each round",
-}
-
-
-## Who holds initiative this round (read-only: during Deploy the side the rules will pick at Reveal,
-## afterwards the side that has it) and why. {side: &"player" / &"enemy" (viewer-relative), mine,
-## round, why: &"behind" / &"tie", score_player, score_enemy, tie_rule (id), short ("YOU" / "RIVAL"),
-## reason ("You're behind 2-4: the side behind on score goes first."), effect (what it does)}.
-static func initiative_info(state: MatchState, viewer: int = MatchState.PLAYER) -> Dictionary:
-	if state == null:
-		return {}
-	var holder: int = state.initiative
-	var planning: bool = state.phase in [MatchState.Phase.SETUP, MatchState.Phase.BRIEFING, MatchState.Phase.DEPLOY]
-	if planning and state.hooks != null:
-		holder = int(state.hooks.initiative_side(state))
-	var me: int = state.sides[viewer].score
-	var foe: int = state.sides[1 - viewer].score
-	var mr: Variant = state.hooks.mode_rules if state.hooks != null else null
-	if state.phase in [MatchState.Phase.SCORE, MatchState.Phase.ENDED] and mr != null:
-		# The reason is the score as it was at Reveal (this round's points came after).
-		var gain: Variant = (mr as Object).get(&"last_gain")
-		if gain is Array and (gain as Array).size() == 2:
-			me -= int(gain[viewer])
-			foe -= int(gain[1 - viewer])
-	var mine: bool = holder == viewer
-	var tie: bool = me == foe
-	var rule: StringName = &"player"
-	if mr != null and (mr as Object).get(&"tiebreak") != null:
-		rule = StringName((mr as Object).get(&"tiebreak"))
-	var reason: String = ""
-	if tie:
-		reason = "Tied %d-%d: %s." % [me, foe, String(TIE_RULE_WORDS.get(rule, "the tie rule decides"))]
-	elif mine:
-		reason = "You're behind %d-%d: the side behind on score goes first." % [me, foe]
-	else:
-		reason = "The rival is behind %d-%d: the side behind on score goes first." % [foe, me]
-	return {"side": &"player" if mine else &"enemy", "mine": mine, "round": state.round_number,
-			"why": &"tie" if tie else &"behind", "score_player": me, "score_enemy": foe, "tie_rule": rule,
-			"short": "YOU" if mine else "RIVAL", "reason": reason,
-			"effect": "%s first this round: at Reveal %s cards arrive and %s effects resolve first, and in each firefight beat %s shots go first." % [
-				"You go" if mine else "The rival goes", "your" if mine else "its", "your" if mine else "its", "your" if mine else "its"]}
-
-
 ## What the progressive reveal shows on this board (RevealGate: the systems met, or in use now on
-## either side): {now: [RevealFlags ids in play], trait_rail, links, initiative: bool}.
+## either side): {now: [RevealFlags ids in play], trait_rail, links}.
 static func reveal_info(state: MatchState) -> Dictionary:
 	var now: Array[StringName] = RevealFlags.match_triggers(state)
 	return {"now": now, "trait_rail": RevealGate.shown(RevealFlags.TRAIT_RAIL, now),

@@ -102,6 +102,21 @@ func show_incoming(revealed_name: String = "") -> void:
 	queue_redraw()
 
 
+## kc-feedback: a rival play your recon revealed, shown as its real card (BannerView.show_spotted). The
+## slot stays an INCOMING slot (nothing to target or move); slot_uid is the card's uid (inspect).
+func show_spotted(unit: Dictionary) -> void:
+	side = &"enemy"
+	movable = false
+	move_chip.visible = false
+	kind = Kind.INCOMING
+	slot_uid = int(unit.get("uid", -1))
+	pending = false
+	entry = unit
+	revealed = String(unit.get("name", ""))
+	banner.show_spotted(unit)
+	queue_redraw()
+
+
 func show_empty(slot_side: StringName) -> void:
 	side = slot_side
 	movable = false

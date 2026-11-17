@@ -39,11 +39,11 @@ const CARD_RATIO_MIN: float = 1.3
 const PHONE: Dictionary = {"pad_y": 4.0, "row_gap": 3.0, "mid_gap": 3.0, "obj_h": 52.0, "gutter": 14.0,
 		"strip_w": 62.0, "badge_h": 61.0, "badge_gap": 2.0, "side_gap": 8.0, "tray_gap": 12.0, "tray_min": 346.0,
 		"tray_pad": 4.0, "card_max": Vector2(104, 130), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 64.0, "tab_h": 64.0,
-		"ks_h": 64.0, "ks_w": 62.0, "menu_h": 61.0, "ks_v_h": 61.0}
+		"ks_h": 64.0, "ks_w": 62.0, "menu_h": 61.0, "ks_v_h": 61.0, "score_h": 24.0}
 const DESKTOP: Dictionary = {"pad_y": 12.0, "row_gap": 6.0, "mid_gap": 6.0, "obj_h": 96.0, "gutter": 20.0,
 		"strip_w": 68.0, "badge_h": 64.0, "badge_gap": 4.0, "side_gap": 12.0, "tray_gap": 12.0, "tray_min": 224.0,
 		"tray_pad": 12.0, "card_max": Vector2(108, 136), "card_gap": 8.0, "supply_h": 48.0, "btn_h": 72.0, "tab_h": 64.0,
-		"ks_h": 64.0, "ks_w": 62.0, "menu_h": 64.0, "ks_v_h": 64.0}
+		"ks_h": 64.0, "ks_w": 62.0, "menu_h": 64.0, "ks_v_h": 64.0, "score_h": 40.0}
 
 
 ## area: the safe-area size the match screen lays out in. mirror: tray left, strip right.
@@ -59,7 +59,9 @@ static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dicti
 	if is_portrait(area):
 		return compute_portrait(area)
 	var p: Dictionary = (PHONE if compact else DESKTOP).duplicate()
-	var fixed_h: float = 2.0 * p["pad_y"] + 2.0 * p["mid_gap"] + p["obj_h"] + 6.0 * p["row_gap"]
+	# kc-feedback (head: "the scoring should be at the top of the battlefield area"): the score race
+	# (score_race_bar.gd) takes score_h over the board; the banners share what is left.
+	var fixed_h: float = 2.0 * p["pad_y"] + 2.0 * p["mid_gap"] + p["obj_h"] + 6.0 * p["row_gap"] + p["score_h"]
 	var bh: float = floorf((area.y - fixed_h) / 8.0)
 	# Width left for the board once the strip and the tray's guaranteed width are taken.
 	var max_board: float = area.x - p["strip_w"] - p["side_gap"] - p["tray_gap"] - p["tray_min"]
@@ -71,7 +73,7 @@ static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dicti
 	var board_w: float = COLUMNS * bw + (COLUMNS - 1) * p["gutter"]
 	var half_h: float = ROWS * bh + (ROWS - 1) * p["row_gap"]
 	var board_h: float = 2.0 * half_h + 2.0 * p["mid_gap"] + p["obj_h"]
-	var top: float = floorf((area.y - board_h) * 0.5)
+	var top: float = floorf((area.y - board_h - p["score_h"]) * 0.5) + p["score_h"]
 	var strip_x: float = 0.0
 	var board_x: float = p["strip_w"] + p["side_gap"]
 	var tray_x: float = board_x + board_w + p["tray_gap"]
@@ -84,6 +86,7 @@ static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dicti
 		strip.position.x = area.x - strip.end.x
 		board.position.x = area.x - board.end.x
 		tray.position.x = area.x - tray.end.x
+	p["score_race"] = score_race_rect(board, p["score_h"])
 	p["compact"] = compact
 	p["mirror"] = mirror
 	p["bh"] = bh
@@ -96,6 +99,11 @@ static func compute(area: Vector2, compact: bool, mirror: bool = false) -> Dicti
 	_ks_rows(p, tray.size)
 	_hand_grid(p, tray.size)
 	return p
+
+
+## kc-feedback: the score race's rect, right over the board (full board width, a 3 px gap under it).
+static func score_race_rect(board: Rect2, score_h: float) -> Rect2:
+	return Rect2(board.position.x, board.position.y - score_h, board.size.x, score_h - 3.0)
 
 
 ## kc-layout-a (the head's L4): the killstreak sockets live in the icon strip, under the STREAK
@@ -366,8 +374,10 @@ static func compute_portrait(area: Vector2) -> Dictionary:
 	var board_w: float = COLUMNS * bw + (COLUMNS - 1) * PORTRAIT_GUTTER
 	var half_h: float = ROWS * bh + (ROWS - 1) * p["row_gap"]
 	var board_h: float = 2.0 * half_h + 2.0 * p["mid_gap"] + p["obj_h"]
-	var board: Rect2 = Rect2(floorf((area.x - board_w) * 0.5), strip.end.y + 8.0, board_w, board_h)
+	var score_h: float = p["score_h"]
+	var board: Rect2 = Rect2(floorf((area.x - board_w) * 0.5), strip.end.y + 8.0 + score_h, board_w, board_h)
 	var tray: Rect2 = Rect2(pad, board.end.y + 8.0, w, maxf(0.0, area.y - board.end.y - 8.0 - 4.0))
+	p["score_race"] = score_race_rect(board, score_h)
 	p["bh"] = bh
 	p["bw"] = bw
 	p["half_h"] = half_h

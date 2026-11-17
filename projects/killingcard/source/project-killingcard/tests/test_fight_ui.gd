@@ -353,22 +353,15 @@ func test_phone_strip_folds_rival_into_score() -> void:
 		# kc-loadout-clean: no RIVAL badge and no rival hand count on any size.
 		assert_false(rival.visible, "%s RIVAL badge folded" % label)
 		assert_false(score.get_text().contains("/"), "%s SCORE has no rival hand count (%s)" % [label, score.get_text()])
-		assert_true(score.get_text().contains("TO "), "%s SCORE shows the target (%s)" % [label, score.get_text()])
+		assert_true(m.get_score_race().get_text().contains("First to "), "%s the score race shows the target (%s)" % [label, m.get_score_race().get_text()])
 		if phone:
 			var rail: Control = m.get_trait_rail()
 			var badge_h: float = float(m.metrics["badge_h"])
-			# kc-onboard-ui: the slot holds the initiative chip while no trait is in play (a full
-			# badge), the trait rail once one is (a full badge slot or more).
-			var chip: Control = m.get_initiative_chip()
-			var holder: Control = chip if chip.visible else rail
+			# kc-fair: no initiative chip; the trait rail has the slot (a full badge slot or more).
+			var holder: Control = rail
 			assert_true(holder.size.y >= badge_h, "%s the %s has a full badge slot (%.0f >= %.0f px)" % [label, holder.name, holder.size.y, badge_h])
 			if not m.metrics.has("rail_tray"):
 				assert_true(m.get_badge(&"preview").position.y < rail.position.y, "%s PREVIEW sits above the rail" % label)
-			m.toggle_flyout(&"score")
-			await _frames(2)
-			assert_true(m.get_node("%Minimap").is_visible_in_tree() and m.get_node("%ScoreBar").is_visible_in_tree(),
-					"%s SCORE flyout holds the score and the rival intel" % label)
-			m.close_flyout()
 			var strip_r: Rect2 = m.get_badge(&"deck").get_parent().get_global_rect().grow(0.6)
 			if m.metrics.has("rail_tray"):
 				# kc-layout-a: the phone's sets rail sits in the tray's top row (the sockets took the strip).

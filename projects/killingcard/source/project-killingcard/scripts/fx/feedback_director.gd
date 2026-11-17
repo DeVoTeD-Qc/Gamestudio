@@ -28,7 +28,7 @@
 #     KILLSTREAK_RESOLVED the plain log line ("Mortar Barrage hit column C: Rifleman -2 (down)") as a
 #                         caption and a killfeed line, then the fight goes on
 #     SUPPRESSED / SURVIVED_LETHAL / PATCHED / EQUIPMENT_TRIGGERED: short tags
-#     ZONE_CONTROL / MODE_SCORED: "+50 ZONE SECURED" / "+N POINTS" pop-ups
+#     ZONE_CONTROL: "+1 YOU" / "+1 RIVAL" over each column that scores (kc-feedback); MODE_SCORED: the score race pops "+N"
 #   Everything else costs no time. No rules logic: it reads the event fields and nothing else.
 #   Events with `private_to` another side are skipped.
 #
@@ -499,22 +499,25 @@ func _handle(ev: Dictionary) -> float:
 			_tag(target, _display_name(ev.get("card_id", &"")).to_upper(), FxStyle.side_color(ev.get("side", &"")), ev)
 			return t.get_value(&"popup_beat")
 		RulesEvent.ZONE_CONTROL:
-			if ev.get("owner") == viewer_side and int(score_popups.get(&"zone", 0)) > 0:
+			# kc-feedback (head: no recap panel, show what just happened where it happens): each column
+			# that scores says so on the board, for either side: "+1 YOU" / "+1 RIVAL" (Hot Zone +2).
+			var pts: int = int(ev.get("points", 0))
+			var owner: StringName = StringName(ev.get("owner", &""))
+			if pts > 0 and owner in [&"player", &"enemy"] and int(score_popups.get(&"zone", 0)) > 0:
 				var r: Rect2 = _zone_rect(ev.get("zone", &""))
 				if r.has_area():
-					_column_flourish(Rect2(_to_local(r.position), r.size), ev)
-					_popup_at(_to_local(r.get_center()),
-							"+%d ZONE SECURED" % int(score_popups[&"zone"]), &"heading", 22, FxStyle.AMBER, ev)
+					var mine: bool = owner == viewer_side
+					if mine:
+						_column_flourish(Rect2(_to_local(r.position), r.size), ev)
+					_popup_at(_to_local(r.get_center()), "+%d %s" % [pts, "YOU" if mine else "RIVAL"], &"heading", 24,
+							FxStyle.AMBER if mine else FxStyle.RED, ev)
 					return t.get_value(&"popup_beat")
 			return 0.0
 		RulesEvent.MODE_SCORED:
-			var gained: int = int(ev.get("player_gained" if viewer_side == &"player" else "enemy_gained", 0))
-			var anchor: Rect2 = _anchor_rect(&"score")
-			if gained > 0 and anchor.has_area():
-				_popup_at(_to_local(Vector2(anchor.get_center().x, anchor.end.y - 10.0)),
-						"+%d %s" % [gained, "POINT" if gained == 1 else "POINTS"], &"heading", 22, FxStyle.AMBER, ev)
-				return t.get_value(&"popup_beat")
-			return 0.0
+			# kc-feedback: the score race over the board fills and pops "+N" itself (match_screen); a beat
+			# here keeps the playback on it long enough to see.
+			var gained: int = int(ev.get("player_gained", 0)) + int(ev.get("enemy_gained", 0))
+			return t.get_value(&"popup_beat") if gained > 0 and _anchor_rect(&"score").has_area() else 0.0
 	return 0.0
 
 

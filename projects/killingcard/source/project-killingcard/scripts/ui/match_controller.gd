@@ -105,11 +105,10 @@ var duel: Object = null
 var _cover: Control = null
 ## kc-duel-ui: the last round's public summary (shown on the cover).
 var _last_round_line: String = ""
-## kc-ux-text: the last round's recap (round_recap), shown once with the next Deploy's hint.
-var _recap: String = ""
-## kc-clarity: the same round as ScoreRace.recap() rows (per column), for the recap panel.
-var _recap_data: Dictionary = {}
-const RECAP_SECONDS: float = 4.5
+## kc-feedback (head: "the round recap at the bottom is overwhelming"): no recap panel. Each round's
+## ScoreRace.recap() goes to this log instead (newest last), behind the LOG badge (open_round_log()).
+var round_log: Array[Dictionary] = []
+const ROUND_LOG_MAX: int = 8
 var map: MapData = null
 ## {kind: &"card", uid}, {kind: &"operator"} or {kind: &"item", id}; empty = nothing selected.
 var selection: Dictionary = {}
@@ -199,6 +198,8 @@ func _on_screen_ready() -> void:
 		_screen.fast_fights_toggled.connect(_on_fast_toggled)
 	if _screen.has_signal(&"rail_inspected"):
 		_screen.rail_inspected.connect(_on_rail_inspected, d)
+	if _screen.has_signal(&"round_log_requested"):
+		_screen.round_log_requested.connect(open_round_log, d)
 	if _screen.has_signal(&"item_inspected"):
 		_screen.item_inspected.connect(open_item_inspector, d)
 	if _screen.has_signal(&"trait_inspected"):
@@ -500,7 +501,6 @@ func press_ready() -> void:
 	if state == null or _busy or state.phase != MatchState.Phase.DEPLOY or state.sides[me_side].ready \
 			or is_mulligan_open():
 		return
-	_dismiss_recap()
 	clear_selection()
 	var me: RulesSide = state.sides[me_side]
 	var supply_unspent: int = me.supply
@@ -560,6 +560,10 @@ func _play_round(supply_unspent: int, hand_size: int) -> void:
 			_screen.prepare_fight(resolved)
 		var in_fight: Array = [false]
 		var on_event: Callable = func(ev: Dictionary) -> void:
+			if ev.get("type") == RulesEvent.MODE_SCORED and _screen.has_method(&"score_race_scored"):
+				# kc-feedback: the score race fills (and pops "+N") the moment the round scores.
+				var pts: Array[int] = [int(ev.get("player_score", 0)), int(ev.get("enemy_score", 0))]
+				_screen.score_race_scored(pts[me_side], pts[foe_side])
 			if ev.get("type") == RulesEvent.PHASE_CHANGED:
 				var was_fight: bool = in_fight[0]
 				in_fight[0] = StringName(ev.get("phase", "")) == &"firefight"
@@ -608,8 +612,9 @@ func _play_round(supply_unspent: int, hand_size: int) -> void:
 		round_presented.emit()
 		return
 	_last_round_line = _round_line()
-	_recap_data = ScoreRace.recap(state, me_side, resolved)
-	_recap = String(_recap_data["plain"])
+	round_log.append(ScoreRace.recap(state, me_side, resolved))
+	if round_log.size() > ROUND_LOG_MAX:
+		round_log.remove_at(0)
 	if is_hot_seat():
 		round_presented.emit()
 		duel.call(&"round_done")  # the next round's first cover (cover_needed)
@@ -692,9 +697,6 @@ func _hold_concepts() -> void:
 			return guide.peek_id() != &"mulligan"
 		if _screen.get_inspector().is_open():
 			return true
-		var recap: Variant = _screen.call(&"get_round_recap") if _screen.has_method(&"get_round_recap") else null
-		if recap is Control and (recap as Control).has_method(&"is_open") and bool((recap as Control).call(&"is_open")):
-			return true
 		var intro: Variant = _screen.call(&"get_match_intro") if _screen.has_method(&"get_match_intro") else null
 		if intro is Control and (intro as Control).is_visible_in_tree():
 			return true
@@ -723,11 +725,11 @@ func notice_concepts(snap: Dictionary = {}) -> void:
 	if not me.plays.is_empty():
 		guide.notice(&"ready", ready_btn)
 	if state.round_number >= 2:
-		guide.notice(&"firefight", _screen.get_board(), avoid)
+		var ff: Variant = _firefight_anchor()
+		if ff != null:
+			guide.notice(&"firefight", ff, avoid)
 		guide.notice(&"streak", keys.get("streak"), avoid)
 		guide.notice(&"killstreak", keys.get("killstreaks"), avoid)
-		if keys.has("initiative"):
-			guide.notice(&"initiative", keys["initiative"], avoid)
 	var ability: Variant = _screen.call(&"get_ability_button") if _screen.has_method(&"get_ability_button") else null
 	if ability is Control and (ability as Control).is_visible_in_tree():
 		guide.notice(&"operator_ability", ability, avoid)
@@ -756,9 +758,11 @@ func notice_concepts(snap: Dictionary = {}) -> void:
 		var lane: Dictionary = lanes[z]
 		var lane_node: Node = board.get_lane(MapData.ZONE_IDS[z]) if board.has_method(&"get_lane") else null
 		var tile: Control = lane_node.get_objective_tile() if lane_node != null and lane_node.has_method(&"get_objective_tile") else null
-		if int(lane.get("incoming", 0)) > 0 and lane_node is Control:
-			guide.notice(&"incoming", (lane_node as Control).get_global_rect().intersection(
-					Rect2((lane_node as Control).get_global_position(), Vector2((lane_node as Control).size.x, (lane_node as Control).size.y * 0.5))), avoid)
+		# kc-feedback: INCOMING and SPOTTED point at the exact slot (not the column).
+		if int(lane.get("incoming", 0)) > 0 and lane_node != null and lane_node.has_method(&"get_enemy_slots"):
+			for es: Node in lane_node.get_enemy_slots():
+				if es.kind == es.Kind.INCOMING and es.is_visible_in_tree():
+					guide.notice(&"spotted" if es.banner.is_spotted() else &"incoming", es, avoid)
 		if StringName(String(lane.get("control", ""))) in [&"player", &"enemy"] and tile != null:
 			guide.notice(&"control", tile, avoid)
 		var terr: Dictionary = lane.get("terrain", {})
@@ -769,6 +773,23 @@ func notice_concepts(snap: Dictionary = {}) -> void:
 		guide.notice(&"preview", pv, avoid)
 	if keys.has("traits") and (keys["traits"] as Control).is_visible_in_tree():
 		guide.notice(&"trait_rail", keys["traits"], avoid)
+
+
+## kc-feedback: the firefight tip points at the two front units of a column where both sides have
+## units (the shooters); null (no tip yet) while no column has units of both sides.
+func _firefight_anchor() -> Variant:
+	var board: Control = _screen.get_board()
+	if board != null and board.has_method(&"get_lane"):
+		for z: int in MatchState.ZONE_COUNT:
+			if not FirefightResolver.has_firefight(state, z):
+				continue
+			var ln: Variant = board.get_lane(MapData.ZONE_IDS[z])
+			if ln is Node and (ln as Node).has_method(&"get_enemy_slots"):
+				var a: Control = (ln as Node).get_enemy_slots()[0]
+				var b: Control = (ln as Node).get_friendly_slots()[0]
+				if a.is_visible_in_tree() and b.is_visible_in_tree():
+					return a.get_global_rect().merge(b.get_global_rect())
+	return null
 
 
 func _reveal_off() -> void:
@@ -796,17 +817,9 @@ func _deploy_hint() -> void:
 	# that changed, then what to do now.
 	var now: String = "Round %d: drag your Operator onto a column." % state.round_number if s.operator_can_deploy \
 			else "Round %d: play cards, then READY." % state.round_number
-	if _recap != "":
-		# kc-clarity (playtest v28): the recap stays until a tap (eaten), a drag, ~4 s or a play
-		# (per column: who still had units there and who scored), the drill keeps the short toast.
-		if _screen.has_method(&"show_round_recap") and not _is_tutorial():
-			_screen.show_round_recap(_recap_data, now)
-		else:
-			_screen.show_toast(_recap + "\n" + now, RECAP_SECONDS)
-		_recap = ""
-		_recap_data = {}
-	else:
-		_screen.show_toast(now)
+	# kc-feedback: no recap panel; what happened was shown where it happened (the score race's "+N",
+	# the column pop-ups, damage numbers, eliminations). The details are one tap away (LOG).
+	_screen.show_toast(now)
 
 
 ## kc-ux-text: one line for the round that just resolved, from your side: the points each side
@@ -816,10 +829,23 @@ func round_recap(events: Array) -> String:
 	return String(ScoreRace.recap(state, me_side, events)["plain"])
 
 
-## kc-clarity: the recap panel goes away as soon as the player starts to plan.
-func _dismiss_recap() -> void:
-	if _screen != null and _screen.has_method(&"hide_round_recap"):
-		_screen.hide_round_recap()
+## kc-feedback: the round log (LOG badge): each round's columns, points and losses, newest first.
+func open_round_log() -> void:
+	if state == null or _screen == null:
+		return
+	var parts: PackedStringArray = []
+	for i: int in range(round_log.size() - 1, -1, -1):
+		var rc: Dictionary = round_log[i]
+		var lines: PackedStringArray = [String(rc.get("title", ""))]
+		for row: Dictionary in rc.get("rows", []):
+			lines.append("%s: %s" % [String(row.get("letter", "?")), String(row.get("text", ""))])
+			if String(row.get("why", "")) != "":
+				lines.append("   " + String(row["why"]))
+		lines.append(String(rc.get("plain", "")))
+		parts.append("\n".join(lines))
+	_open_info({"title": "Round log", "type": "%d round%s so far" % [round_log.size(), "" if round_log.size() == 1 else "s"],
+			"text": "\n\n".join(parts) if not parts.is_empty() else "Nothing yet: the log fills in after each round.",
+			"status": ScoreRace.goal_line(state, me_side)})
 
 
 func refresh() -> void:
@@ -1187,7 +1213,6 @@ func _apply_mulligan(put_back: Array[int]) -> Dictionary:
 # =============================================================================
 
 func select_card(uid: int) -> void:
-	_dismiss_recap()
 	selection = {"kind": &"card", "uid": uid}
 	target_uid = -1
 	_show_selection()
@@ -1206,7 +1231,6 @@ func select_card(uid: int) -> void:
 
 
 func select_operator() -> void:
-	_dismiss_recap()
 	selection = {"kind": &"operator"}
 	target_uid = -1
 	_show_selection()
@@ -1443,7 +1467,7 @@ func _friendly_zone(uid: int) -> int:
 	return MatchState.NO_ZONE
 
 
-## kc-wip-impl Agile (wip-set.md §2.2): select my Agile unit on the board; then a tap on an adjacent
+## kc-wip-impl Agile (wip-set.md §2.2): select my Agile unit on the board; then a tap on any other
 ## column orders the free move (it moves at Reveal, to the back of that line). Undo takes it back.
 func select_agile(uid: int) -> void:
 	var u: RulesUnit = state.sides[me_side].find_unit(uid) if state != null else null
@@ -1452,7 +1476,7 @@ func select_agile(uid: int) -> void:
 	selection = {"kind": &"agile", "uid": uid}
 	target_uid = -1
 	_show_selection()
-	_screen.show_toast("%s (Agile): tap an adjacent column to move it. Free, once a round." % u.card.display_name)
+	_screen.show_toast("%s (Agile): tap any other column to move it. Free, once a round." % u.card.display_name)
 
 
 func _enemy_zone(uid: int) -> int:
@@ -1688,7 +1712,7 @@ func _on_lane_tapped(zone: int, slot_side: StringName, uid: int) -> void:
 			elif u != null and u.is_operator and MatchSnapshot.can_move(state, me_side, u):
 				# kc-loadout-clean: tap-then-tap fallback for the drag: the Operator's Rotate.
 				select_operator()
-				_screen.show_toast("Tap an adjacent column to move your Operator (or drag it).")
+				_screen.show_toast("Tap any other column to move your Operator (or drag it).")
 		return
 	if selection.get("kind") == &"agile" and slot_side == &"player" and uid == int(selection["uid"]):
 		clear_selection()
@@ -1812,7 +1836,7 @@ func _pick_or_play(zone: int, slot_side: StringName, uid: int) -> void:
 				play_at(_friendly_zone(uid))
 				return
 			_show_selection()
-			_screen.show_toast("Now tap an adjacent column.")
+			_screen.show_toast("Now tap the column to move it to.")
 			return
 	play_at(zone)
 
@@ -1820,7 +1844,6 @@ func _pick_or_play(zone: int, slot_side: StringName, uid: int) -> void:
 func _on_card_drag_started(uid: int, pos: Vector2) -> void:
 	if state == null or _swallow_tap():
 		return
-	_dismiss_recap()
 	if not (selection.get("kind") == &"card" and int(selection["uid"]) == uid):
 		select_card(uid)
 		if selection.is_empty():
@@ -1836,7 +1859,6 @@ func _on_card_drag_started(uid: int, pos: Vector2) -> void:
 func _on_operator_drag_started(pos: Vector2) -> void:
 	if state == null or _swallow_tap() or state.sides[me_side].operator_unit == null:
 		return
-	_dismiss_recap()
 	if operator_deployed():
 		# kc-loadout-clean: the deployed card is the ability: drag it to the column it targets.
 		var a: Dictionary = RunV2Views.ability_view(state, me_side)
@@ -1941,6 +1963,9 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 			_open_terrain(zone)
 			return
 		&"incoming":
+			# kc-feedback: a SPOTTED card (your recon revealed it): its full card, like any other.
+			if uid >= 0 and _open_spotted(zone, uid):
+				return
 			_open_info({"banner_back": true, "title": "Incoming rival play",
 					"type": "hidden · %s" % ZONE_WORDS[zone],
 					"text": "A rival card for %s. It flips at Reveal." % ZONE_WORDS[zone],
@@ -1967,7 +1992,7 @@ func _on_lane_long_pressed(zone: int, slot_side: StringName, uid: int) -> void:
 		if mod_line != "":
 			status += " " + mod_line
 		if u.agile and side == me_side:
-			status += " Agile: tap it, then an adjacent column."
+			status += " Agile: tap it, then any other column."
 		if u.beam:
 			status += " Beam: also hits %s units in front." % ("your" if side == me_side else "their own")
 		open_card_inspector(u.card, "friend" if side == me_side else "enemy", status, MatchSnapshot.unit_entry(state, u, s), side,
@@ -2142,6 +2167,25 @@ func _art_line(art: BannerArt) -> String:
 	return "Art: %s · %d of %d" % [what, maxi(1, alts.find(art.id) + 1), alts.size()]
 
 
+## kc-feedback: the inspector for a rival play your recon revealed (SPOTTED on the board). False when
+## `uid` is not one of this zone's spotted plays.
+func _open_spotted(zone: int, uid: int) -> bool:
+	for e: Dictionary in MatchSnapshot.spotted_cards(state, me_side, zone):
+		if int(e.get("uid", -1)) != uid:
+			continue
+		var foe: RulesSide = state.sides[foe_side]
+		var status: String = "Spotted by your recon: it arrives in %s at Reveal." % ZONE_WORDS[zone]
+		if foe.operator_unit != null and foe.operator_unit.uid == uid:
+			_open_operator(foe_side)
+			return true
+		var card: CardData = CardDB.get_card(StringName(e.get("card_id", &"")))
+		if card == null:
+			return false
+		open_card_inspector(card, "enemy", status, e, foe_side, uid)
+		return true
+	return false
+
+
 ## Inspector for something that is not a card in hand (objective tile, incoming back, rails).
 func _open_info(info: Dictionary) -> void:
 	var d: Dictionary = info.duplicate()
@@ -2159,12 +2203,10 @@ func _on_rail_inspected(key: StringName) -> void:
 	match key:
 		&"score":
 			var goal: String = String(state.config.get_meta(&"goal_text")) if state.config.has_meta(&"goal_text") else ""
-			var ini_s: Dictionary = MatchSnapshot.initiative_info(state, me_side)
 			_open_info({"title": "Score", "type": "round %d · %s" % [state.round_number, String(MatchState.PHASE_NAMES[state.phase]).to_lower()],
 					"text": "%s %s" % [ScoreRace.goal_line(state, me_side), goal],
-					"status": "%s %s" % ["Each round: +1 per column you hold at round end (only your units left there)." if ScoreRace.columns_score(state)
-							else "Each round: +1 per enemy unit you eliminate.",
-						"You go first." if bool(ini_s.get("mine", true)) else "The rival goes first."]})
+					"status": "Each round: +1 per column you hold at round end (only your units left there)." if ScoreRace.columns_score(state)
+							else "Each round: +1 per enemy unit you eliminate."})
 		&"deck":
 			_open_info({"title": "Your deck", "type": "deck · discard",
 					"text": "%d to draw, %d discarded. Draw %d a round (hand max %d)." % [
@@ -2192,6 +2234,10 @@ func _on_rail_inspected(key: StringName) -> void:
 					"status": "A killstreak you earned stays READY after a reset, until you call it in."})
 		&"menu":
 			_open_info({"title": "Menu", "type": "pause", "text": "Pause, settings, forfeit, quit.", "status": ""})
+		&"log":
+			_open_info({"title": "Round log", "type": "round %d" % state.round_number,
+					"text": "Tap LOG for what happened each round: who held each column, the points, the losses.",
+					"status": "The score race over the board shows the score itself."})
 		&"preview":
 			_open_info({"title": "Preview", "type": "forecast",
 					"text": "Forecast of this round's firefight, from what you can see (P).", "status": ""})
@@ -2202,11 +2248,6 @@ func _on_rail_inspected(key: StringName) -> void:
 			_open_info({"title": "Sets (traits)", "type": "trait rail · yours%s" % ("" if _screen.compact else " and the rival's"),
 					"text": "2 of a trait in play: tier 2 bonus. 3: tier 3 too.",
 					"status": "Long press a chip for its bonus."})
-		&"initiative":
-			var ini: Dictionary = MatchSnapshot.initiative_info(state, me_side)
-			_open_info({"title": "Initiative", "type": "round %d · %s first" % [state.round_number, "you go" if bool(ini.get("mine", true)) else "the rival goes"],
-					"text": "%s %s" % [String(ini.get("reason", "")), String(ini.get("effect", ""))],
-					"status": "The side behind on score goes first."})
 		&"hand_tab":
 			_open_info({"title": "Your hand", "type": "%d cards" % me.hand.size(),
 					"text": "Opens in Deploy. Outside Deploy, PEEK shows it read-only.", "status": ""})
@@ -2568,8 +2609,6 @@ func _emit(e: Dictionary) -> void:
 			var phase: StringName = StringName(e.get("phase", ""))
 			if phase in [&"briefing", &"deploy", &"reveal", &"firefight", &"score"]:
 				EventBus.phase_changed.emit(phase)
-		RulesEvent.INITIATIVE:
-			EventBus.initiative_changed.emit(StringName(e.get("side", &"")))
 		RulesEvent.CARD_DRAWN:
 			EventBus.card_drawn.emit(StringName(e.get("card_id", &"")))
 		RulesEvent.CARD_REVEALED:

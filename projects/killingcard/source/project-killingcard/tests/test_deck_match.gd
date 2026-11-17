@@ -75,11 +75,10 @@ func test_first_run_match_plays_the_shown_starter() -> void:
 		assert_true(c.start_run_match(m), "%s: the run match starts" % label)
 		assert_false(c.pitch_swaps_apply(), "%s: no showcase swaps in a run match" % label)
 		# Studio head (Nov 2026, "same as newcomer build"): the pitch's run reveals step by step
-		# like the public build: round 1 has no initiative chip, tips and the declutter apply.
+		# like the public build: tips and the declutter apply.
 		assert_true(RevealGate.active, "%s: a run match reveals step by step" % label)
 		await _frames(2)
-		var chip: Control = screen.get_initiative_chip()
-		assert_true(chip == null or not chip.visible or chip.get_text() == "", "%s: no initiative chip in round 1" % label)
+		assert_false(screen.has_method(&"get_initiative_chip"), "%s: no initiative chip (kc-fair: nobody goes first)" % label)
 		var me: RulesSide = c.state.sides[0]
 		var played: Dictionary = _multiset(me.deck + me.hand)
 		assert_eq(played, shown, "%s: match 1 deck + hand = the starter shown (%s)" % [label, played])

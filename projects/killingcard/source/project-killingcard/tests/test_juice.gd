@@ -95,7 +95,7 @@ func _round() -> Array:
 		_elim(11, &"enemy", 1),
 		_ev(RulesEvent.FIREFIGHT_COLUMN_ENDED, {"zone": &"mid", "beats": 3}),
 		_ev(RulesEvent.PHASE_CHANGED, {"phase": &"score"}),
-		_ev(RulesEvent.ZONE_CONTROL, {"zone": &"mid", "owner": &"player"}),
+		_ev(RulesEvent.ZONE_CONTROL, {"zone": &"mid", "owner": &"player", "points": 1}),
 	]
 
 

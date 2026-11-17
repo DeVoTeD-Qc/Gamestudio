@@ -5,7 +5,7 @@
 #     the rival's side), an empty trait socket, the stencil font on the name only;
 #   - kc-ipad-cards (kc-no-training): no Recruit, no locked keywords, level badge or camo band;
 #   - W1: board banners show the cost but not the name; hand cards keep cost + name;
-#   - the initiative chip and the SCORE flag: who goes first this round, and why (behind / tie),
+#   - kc-fair: no initiative chip / flag / tip anywhere (nobody goes first),
 #     inspectable by long press / right click; the rule itself is read, never changed;
 #   - progressive reveal: the trait rail and link ticks hide until met or in use; the Engine part
 #     of the deck view waits for its reveal flag;
@@ -168,7 +168,7 @@ func test_no_training_on_any_card() -> void:
 
 
 # =============================================================================
-# 2. The board (W1), the initiative chip and the reveal
+# 2. The board (W1), no initiative, and the reveal
 # =============================================================================
 
 func test_board_banners_cost_without_name_and_si_hand_cards() -> void:
@@ -222,46 +222,27 @@ func test_board_banners_cost_without_name_and_si_hand_cards() -> void:
 	_restore_profile()
 
 
-func test_initiative_chip_says_who_goes_first_and_why() -> void:
+## kc-fair (studio head: "there shouldn't be any [impact of being first]"): no initiative anywhere: no
+## chip, no flag, no tip, no glossary entry, no inspector line; the score is the race over the board.
+func test_no_initiative_anywhere_on_the_board() -> void:
 	_save_profile()
 	var s: Array = await _spawn(Layout.PHONE)
 	var vp: SubViewport = s[0]
 	var m: Control = s[1]
 	var c: Node = s[2]
-	var st: MatchState = c.state
-	var info: Dictionary = MatchSnapshot.initiative_info(st, 0)
-	var rule_side: int = int(st.hooks.initiative_side(st))
-	assert_eq(info["side"], &"player" if rule_side == 0 else &"enemy", "the chip follows the rule's pick (not changed)")
-	assert_eq(info["why"], &"tie", "0-0 in round 1: the tie rule decides")
-	assert_true(String(info["reason"]).begins_with("Tied 0-0"), "reason in words: %s" % info["reason"])
-	var chip: InitiativeChip = m.get_initiative_chip()
-	assert_true(chip.is_visible_in_tree(), "the chip shows on the phone strip while no trait is in play")
-	assert_true(chip.get_text().contains("1ST") and chip.get_text().contains(String(info["short"])), "chip text %s" % chip.get_text())
-	assert_true(m.get_key_controls().has("initiative"), "the chip is a key control")
-	var k: float = Layout.points_per_px(Layout.PHONE) if Layout.has_method(&"points_per_px") else 0.7226
-	assert_true(minf(chip.size.x, chip.size.y) * k >= 44.0 - 0.01, "chip tap target %s" % chip.size)
+	assert_false(m.has_method(&"get_initiative_chip"), "no initiative chip")
+	assert_false(m.get_key_controls().has("initiative"), "no initiative key control")
+	assert_false(ConceptRegistry.has(&"initiative"), "no initiative tip / glossary entry")
+	assert_false(MatchSnapshot.build(c.state, c.map, 0).has("initiative"), "no initiative in the snapshot")
 	var score: Control = m.get_badge(&"score")
-	var row0: Array = score.lines[0]
-	assert_true(row0.size() >= 2 and (row0[0] as Array).size() > 2 and StringName(row0[0][2]) in [&"flag", &"flag_rival"], "SCORE badge leads with the initiative flag")
-	# Behind on score goes first (read the rule; never change it).
-	st.sides[1].score = 3
-	var info2: Dictionary = MatchSnapshot.initiative_info(st, 0)
-	assert_eq(info2["side"], &"player", "you're behind 0-3: you go first")
-	assert_eq(info2["why"], &"behind", "why = behind")
-	assert_true(String(info2["reason"]).contains("behind 0-3"), "reason: %s" % info2["reason"])
-	st.sides[1].score = 0
-	st.sides[0].score = 2
-	assert_eq(MatchSnapshot.initiative_info(st, 0)["side"], &"enemy", "rival behind 0-2: it goes first")
-	st.sides[0].score = 0
-	c.refresh()
-	await _frames(2)
-	# Studio rule: right click / long press opens the reason and what it does.
-	await _right_click(vp, chip)
+	for row: Array in score.lines:
+		for seg: Array in row:
+			assert_false(seg.size() > 2 and StringName(seg[2]) in [&"flag", &"flag_rival"], "no initiative flag on the strip")
+	await _right_click(vp, m.get_score_race())
 	var insp: Control = m.get_inspector()
-	assert_true(insp.is_open(), "right click opens the initiative inspector")
-	# kc-text: rules and status are IconText labels (RichTextLabel); read every label's words.
+	assert_true(insp.is_open(), "right click on the score race opens the score rules")
 	var text: String = "\n".join(insp.find_children("*", "", true, false).map(func(l: Node) -> String: return IconText.plain(l)))
-	assert_true(text.contains("Initiative") and text.contains("first"), "inspector says who goes first and why")
+	assert_false(text.contains("goes first") or text.contains("go first"), "the score rules never say who goes first: %s" % text)
 	insp.close()
 	_despawn(vp)
 	await tree.process_frame
@@ -284,16 +265,13 @@ func test_reveal_hides_unmet_systems_until_in_use() -> void:
 	snap["synergy"] = {"player": {"rail": [{"trait": &"vanguard", "name": "Vanguard", "count": 2, "next": 3, "tier": 2}], "links": [], "tiers": {}},
 			"enemy": {"rail": [], "links": [], "tiers": {}}}
 	snap["reveal"] = {"trait_rail": false, "links": false}
-	snap["round"] = 2  # kc-ui-pass: a run's round 1 hides the initiative chip (nobody is behind yet)
 	m.show_snapshot(snap)
 	await _frames(2)
 	assert_false(m.get_trait_rail().is_visible_in_tree(), "unmet trait rail hidden")
-	assert_true(m.get_initiative_chip().is_visible_in_tree(), "initiative chip in its place")
 	snap["reveal"] = {"trait_rail": true, "links": true}
 	m.show_snapshot(snap)
 	await _frames(2)
 	assert_true(m.get_trait_rail().is_visible_in_tree(), "revealed rail shows")
-	assert_false(m.get_initiative_chip().is_visible_in_tree(), "phone: the rail takes the slot, SCORE keeps the flag")
 	# The Engine part of the deck view waits for its reveal flag.
 	var rs: Node = tree.root.get_node("RunState")
 	var saved_cfg: RunConfig = rs.config
@@ -345,6 +323,7 @@ func test_new_card_shows_once_and_reset_tips() -> void:
 	assert_eq(nc.offer([RevealFlags.MUSTER_OUT], "s1"), &"", "nothing met yet: no explainer")
 	rs.note_systems([RevealFlags.MUSTER_OUT, RevealFlags.KILLSTREAKS])
 	assert_eq(nc.offer([RevealFlags.CALLING_CARDS], "s1"), &"", "only explainers relevant to this screen")
+	nc.chip_anchor = Rect2(100, 100, 300, 120)  # kc-feedback: a tip always has a real target (the offer row)
 	assert_eq(nc.offer([RevealFlags.MUSTER_OUT], "s2"), RevealFlags.MUSTER_OUT, "met + relevant: handed to the guide")
 	assert_true(g.queued_ids().has(RevealFlags.MUSTER_OUT), "queued as a concept callout")
 	assert_false(nc.is_chip_open() or nc.is_open(), "the old NEW chip / card no longer opens")

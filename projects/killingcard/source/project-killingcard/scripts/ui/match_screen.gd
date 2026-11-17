@@ -48,6 +48,8 @@ signal tray_state_changed(state: StringName)
 signal flyout_changed(key: StringName)
 ## kc-ui3: long-press / right-click on a killstreak tile (its loadout item id).
 signal item_inspected(item_id: StringName)
+## kc-feedback: the LOG badge (where the SCORE badge was) was tapped: the controller opens the round log.
+signal round_log_requested
 ## kc-v2-ui: the Operator ability button was tapped / long-pressed (right-clicked).
 signal ability_pressed
 signal ability_inspected
@@ -69,7 +71,6 @@ const BossPlate: GDScript = preload("res://scripts/ui/boss_plate.gd")
 const OrderStrip: GDScript = preload("res://scripts/fx/order_strip.gd")
 const TutorialProgress: GDScript = preload("res://scripts/ui/tutorial/tutorial_progress.gd")
 const HandGlowFx: GDScript = preload("res://scripts/fx/hand_glow_fx.gd")
-const RoundRecapScript: GDScript = preload("res://scripts/ui/round_recap.gd")
 ## kc-syn-ui: a set callout stays this long before it folds into the rail.
 const SET_CALLOUT_S: float = 1.2
 const TRAY_OPEN: StringName = &"open"
@@ -176,12 +177,12 @@ var _supply_stack: VBoxContainer = null
 ## kc-syn-ui: the trait rail (icon strip), the SETS flyout body, the last known tiers per side
 ## (set callouts fire when a tier switches on / off) and the callouts on screen.
 var _trait_rail: Control = null
-## kc-onboard-ui: the initiative chip, the "New: X" explainer, and the progressive reveal of this board
-## (match_snapshot.reveal_info: trait rail / links / bands shown?).
-var _initiative: InitiativeChip = null
+## kc-onboard-ui: the "New: X" explainer, and the progressive reveal of this board
+## (match_snapshot.reveal_info: trait rail / links / bands shown?). kc-fair: no initiative chip.
 var _new_card: NewCard = null
-## kc-clarity: the per-column round recap over the board's bottom edge (round_recap.gd).
-var _round_recap: PanelContainer = null
+## kc-feedback: the score race over the board (score_race_bar.gd). False: no "+N" pops (tests, tools).
+var _score_race: ScoreRaceBar = null
+var _score_race_animate: bool = true
 var _reveal: Dictionary = {}
 var _rail_area: Rect2 = Rect2()
 var _sets_box: VBoxContainer = null
@@ -204,7 +205,14 @@ func _ready() -> void:
 	# p14 combat feedback: the director finds unit slots by uid on the board; the score and streak
 	# anchors are the strip badges (their flyouts are usually closed).
 	_fx.locator = BoardFxLocator.new(_board)
-	_fx.locator.anchors[&"score"] = _score_badge
+	# kc-feedback: the score race over the board replaces the SCORE badge (the score pop-ups go there).
+	_score_race = ScoreRaceBar.new()
+	_layout.add_child(_score_race)
+	_layout.move_child(_score_race, _board.get_index() + 1)
+	_score_race.inspected.connect(func() -> void:
+		close_flyout()
+		rail_inspected.emit(&"score"))
+	_fx.locator.anchors[&"score"] = _score_race
 	_fx.locator.anchors[&"streak"] = _streak_badge
 	_fx.streak_arc = _operator_panel.get_streak_arc()
 	# Killfeed: the director pushes toasts (over the board); each push is copied to the tray log.
@@ -253,21 +261,8 @@ func _ready() -> void:
 	_ks_row.name = "KillstreakRow"
 	_strip.add_child(_ks_row)
 	_setup_v2()
-	# kc-onboard-ui: who holds initiative this round (and why), above the trait rail.
-	_initiative = InitiativeChip.new()
-	_strip.add_child(_initiative)
-	_initiative.tapped.connect(func() -> void:
-		close_flyout()
-		rail_inspected.emit(&"initiative"))
-	_initiative.inspected.connect(func() -> void:
-		close_flyout()
-		rail_inspected.emit(&"initiative"))
 	_new_card = NewCard.new()
 	add_child(_new_card)
-	_round_recap = RoundRecapScript.new()
-	add_child(_round_recap)
-	# Under the toast, the flyout, the inspector and every sheet (only the board is below it).
-	move_child(_round_recap, _toast.get_index())
 	_trait_rail = TraitRail.new()
 	_trait_rail.name = "TraitRail"
 	_strip.add_child(_trait_rail)
@@ -320,15 +315,12 @@ func _ready() -> void:
 
 ## Renders a full match snapshot (shape: mock_match_data.gd).
 func show_snapshot(snapshot: Dictionary) -> void:
-	# kc-ui-pass (head: "not overwhelming"): in a run's round 1 the initiative flag / chip is noise
-	# (nobody is behind yet): it shows from round 2 and is explained once then. In the player's first
-	# run the PREVIEW eye (an expert forecast) stays hidden. Quick matches and tools show both.
+	# kc-ui-pass: in the player's first run the PREVIEW eye (an expert forecast) stays hidden.
 	# The head (Nov 2026): the PREVIEW eye is parked: hidden everywhere while UiFeatures.FORECAST_EYE is off.
-	if RevealGate.active and int(snapshot.get("round", 1)) <= 1 and not (snapshot.get("initiative", {}) as Dictionary).is_empty():
-		snapshot = snapshot.duplicate()
-		snapshot["initiative"] = {}
 	_preview_button.visible = UiFeatures.FORECAST_EYE and not (RevealGate.active and first_run())
 	_score_bar.set_score(snapshot)
+	_score_race.set_score(int(snapshot.get("score_player", 0)), int(snapshot.get("score_enemy", 0)),
+			int(snapshot.get("target", 0)), int(snapshot.get("round", 1)), _score_race_animate)
 	_minimap.set_intel(snapshot.get("lanes", []))
 	_board.set_lanes(snapshot.get("lanes", []))
 	_operator_panel.set_operator(snapshot)
@@ -341,10 +333,6 @@ func show_snapshot(snapshot: Dictionary) -> void:
 	_set_actions(snapshot)
 	_set_badges(snapshot)
 	_reveal = snapshot.get("reveal", {})
-	if _initiative != null:
-		# kc-ui-pass: in a run's round 1 the initiative chip is noise (nobody is behind yet); it shows
-		# from round 2 (and is explained once then). Quick matches and tools show it always.
-		_initiative.set_info(snapshot.get("initiative", {}))
 	_set_synergy(snapshot.get("synergy", {}))
 	_follow_phase(snapshot)
 	_set_v2(snapshot)
@@ -675,44 +663,19 @@ func show_toast(text: String, seconds: float = TOAST_SECONDS) -> void:
 	# killfeed toasts keep the top edge.
 	if board_r.has_area():
 		_toast.global_position.y = board_r.end.y - _toast.size.y - 4.0
-		# kc-clarity: above the round recap while it is up.
-		if _round_recap != null and _round_recap.visible:
-			_toast.global_position.y = _round_recap.global_position.y - _toast.size.y - 4.0
 	get_tree().create_timer(seconds).timeout.connect(func() -> void:
 		if my_id == _toast_id:
 			_toast.hide())
 
 
-## kc-clarity: the last round, per column, until a tap (anywhere: kc-recap-dismiss, that tap only
-## closes it), a drag, about 4 s, or the player starts to plan.
-func show_round_recap(recap: Dictionary, now: String) -> void:
-	if _round_recap == null:
-		return
-	_toast_id += 1
-	_toast.hide()
-	_round_recap.show_recap(recap, now)
-	_place_round_recap()
+## kc-feedback: the score race over the board (tests, QA, the concept anchor).
+func get_score_race() -> ScoreRaceBar:
+	return _score_race
 
 
-func _place_round_recap() -> void:
-	if _round_recap == null or not _round_recap.visible:
-		return
-	var board_r: Rect2 = _board.get_global_rect()
-	if not board_r.has_area():
-		board_r = Rect2(Vector2.ZERO, size)
-	_round_recap.custom_minimum_size.x = minf(board_r.size.x - 8.0, 560.0)
-	_round_recap.reset_size()
-	var rs: Vector2 = _round_recap.size
-	_round_recap.global_position = Vector2(roundf(board_r.get_center().x - rs.x * 0.5), roundf(board_r.end.y - rs.y - 4.0))
-
-
-func hide_round_recap() -> void:
-	if _round_recap != null:
-		_round_recap.dismiss()
-
-
-func get_round_recap() -> PanelContainer:
-	return _round_recap
+## kc-feedback: points just scored (the round's Score step, during playback): the race fills and pops "+N".
+func score_race_scored(you: int, rival: int) -> void:
+	_score_race.set_score(you, rival, _score_race.target, _score_race.round_number, _score_race_animate)
 
 
 func get_toast_text() -> String:
@@ -769,7 +732,7 @@ func _set_actions(snapshot: Dictionary) -> void:
 ## controls depend on its state (OPEN: hand, UNDO, READY; otherwise the log, the tab, SPEED).
 func get_key_controls() -> Dictionary:
 	var out: Dictionary = {
-		"menu": _menu_button, "score_bar": _score_badge, "operator_panel": _operator_badge,
+		"menu": _menu_button, "score_bar": _score_race, "log": _score_badge, "operator_panel": _operator_badge,
 		"streak": _streak_badge, "minimap": _rival_badge, "preview": _preview_button, "deck": _deck_badge,
 		"board": _board, "supply": _supply_box,
 	}
@@ -778,13 +741,8 @@ func get_key_controls() -> Dictionary:
 	if rival_in_score():
 		# kc-fight-ui: the phone's SCORE badge carries the rival hand; the trait rail takes the slot.
 		out.erase("minimap")
-		# kc-onboard-ui: the slot holds the initiative chip until a trait is in play, then the rail.
-		if _initiative != null and _initiative.visible:
-			out["initiative"] = _initiative
-		if _trait_rail.visible or not out.has("initiative"):
+		if _trait_rail.visible:
 			out["traits"] = _trait_rail
-	elif _initiative != null and _initiative.visible:
-		out["initiative"] = _initiative
 	if not _operator_badge.visible:
 		out.erase("operator_panel")  # kc-layout-a: landscape has no OPERATOR badge
 	# kc-layout-a: the killstreak sockets are in the strip, on screen in every tray state.
@@ -871,6 +829,11 @@ func _layout_regions() -> void:
 	_board.position = board_rect.position
 	_board.size = board_rect.size
 	_board.set_metrics(metrics)
+	var sr: Rect2 = metrics.get("score_race", Rect2())
+	_score_race.position = sr.position
+	_score_race.size = sr.size
+	_score_race.visible = sr.size.y > 0.0
+	_score_race.queue_redraw()
 	# Icon strip.
 	var strip: Rect2 = metrics["strip"]
 	_strip.position = strip.position
@@ -917,49 +880,29 @@ func _layout_regions() -> void:
 	_peek_catcher.position = Vector2.ZERO
 	_peek_catcher.size = area
 	_layout_tray()
-	_place_round_recap.call_deferred()
 
 
-## kc-onboard-ui: the initiative chip takes the top of the rail's area (one badge slot: phone 62x64,
-## desktop 68x64); the trait rail fills the rest. On the phone the rail's area holds one of them: the
-## chip while no trait is in play / revealed (M1), the rail after (the SCORE flag keeps initiative).
+## The trait rail fills the rail's area (kc-fair: the initiative chip that shared it is gone).
 func _layout_strip_extras() -> void:
 	var r: Rect2 = _rail_area
-	if _initiative == null or r.size.y <= 0.0:
+	if r.size.y <= 0.0:
 		return
-	var ch: float = float(metrics.get("badge_h", 64.0))
-	var gap: float = float(metrics.get("badge_gap", 5.0))
-	var in_use: bool = not (_trait_rail.rails.get(&"player", []) as Array).is_empty() or not (_trait_rail.rails.get(&"enemy", []) as Array).is_empty()
-	var rail_on: bool = bool(_trait_rail.get_meta(&"revealed", true)) and in_use
-	_initiative.position = r.position
-	_initiative.size = Vector2(r.size.x, minf(ch, r.size.y))
-	# The phone strip has no room for both (the head's kc-fight-ui answer gives the rail a full badge
-	# slot): once the rail is in use the SCORE badge's flag carries initiative (tap SCORE for why).
-	_initiative.visible = not _initiative.info.is_empty() and (r.size.y >= 2.0 * ch + gap or not rail_on)
-	var top: float = r.position.y + (ch + gap if _initiative.visible else 0.0)
-	_trait_rail.position = Vector2(r.position.x, top)
-	_trait_rail.size = Vector2(r.size.x, maxf(0.0, r.end.y - top))
+	_trait_rail.position = r.position
+	_trait_rail.size = r.size
 	_trait_rail.visible = _trait_rail.size.y >= 30.0 and bool(_trait_rail.get_meta(&"revealed", true))
-	_initiative.queue_redraw()
 
 
-## The initiative chip (tests, QA).
-func get_initiative_chip() -> InitiativeChip:
-	return _initiative
-
-
-## The "New: X" explainer (tests, QA).
 func get_new_card() -> NewCard:
 	return _new_card
 
 
 ## Shows the first pending "New:" explainer among `relevant` (one per round: key "round<n>").
 ## kc-clarity: a small "NEW · X" chip at the board's top edge, at most one per match (NewCard.chips_left).
-func offer_explainer(relevant: Array, key: String) -> StringName:
-	if _new_card == null:
-		return &""
-	_new_card.chip_anchor = _board.get_global_rect()
-	return _new_card.offer(relevant, key)
+## kc-feedback (head: every tip links to the exact thing it explains): on the board every concept is
+## noticed with its own anchor by MatchController.notice_concepts (the card, the slot, the badge), so
+## this no longer hands the guide anything anchored to the whole board.
+func offer_explainer(_relevant: Array, _key: String) -> StringName:
+	return &""
 
 
 func _layout_tray() -> void:
@@ -1192,7 +1135,15 @@ static func fit_button_text(b: Button) -> void:
 # =============================================================================
 
 func _setup_strip() -> void:
-	for pair: Array in [[_score_badge, &"score"], [_streak_badge, &"streak"], [_rival_badge, &"rival"], [_deck_badge, &"deck"]]:
+	# kc-feedback: the score moved to the race over the board; this slot is the round LOG (tap = what
+	# happened each round, long press = what the log is).
+	_score_badge.tapped.connect(func() -> void:
+		close_flyout()
+		round_log_requested.emit())
+	_score_badge.inspected.connect(func() -> void:
+		close_flyout()
+		rail_inspected.emit(&"log"))
+	for pair: Array in [[_streak_badge, &"streak"], [_rival_badge, &"rival"], [_deck_badge, &"deck"]]:
 		var b: Control = pair[0]
 		var key: StringName = pair[1]
 		b.tapped.connect(func() -> void: toggle_flyout(key))
@@ -1414,24 +1365,12 @@ func _set_badges(snapshot: Dictionary) -> void:
 	var muted: Color = Color("#9AA5AE")
 	var friend: Color = get_theme_color(&"friend", &"Hud")
 	var enemy: Color = get_theme_color(&"enemy", &"Hud")
-	# kc-onboard-ui: the initiative flag (holder's colour and shape) leads the round line.
-	var ini: Dictionary = snapshot.get("initiative", {})
-	var round_row: Array = [["R%d" % int(snapshot.get("round", 1)), muted]]
-	if not ini.is_empty():
-		var mine_i: bool = bool(ini.get("mine", true))
-		round_row.push_front(["", friend if mine_i else enemy, &"flag" if mine_i else &"flag_rival"])
-	# kc-clarity (playtest v28): the score with the shapes of the column plates (yours solid, the
-	# rival's hatched: readable with deuteranopia) and the match's target under it, always on.
-	var score_rows: Array = [round_row,
-			[[str(int(snapshot.get("score_player", 0))), friend, &"box_mine"], ["-", muted], [str(int(snapshot.get("score_enemy", 0))), enemy, &"box_rival"]]]
-	var target: int = int(snapshot.get("target", 0))
-	if target > 0:
-		score_rows.append([["TO %d" % target, Color("#E6EBEF")]])
+	# kc-feedback: the score is the race over the board; this badge is the round number and the LOG.
+	_score_badge.glyph = &"none"
 	_score_badge.font_size = 20
-	_score_badge.row_sizes = [16, 20, 16] if target > 0 else []
-	_score_badge.set_value(score_rows)
-	_score_badge.tooltip_text = "Score: you %d, rival %d. First to %d wins." % [int(snapshot.get("score_player", 0)),
-			int(snapshot.get("score_enemy", 0)), target] if target > 0 else ""
+	_score_badge.row_sizes = [16, 20]
+	_score_badge.set_value([[["R%d" % int(snapshot.get("round", 1)), muted]], [["LOG", text_c]]])
+	_score_badge.tooltip_text = "Round log: what happened each round"
 	var op: Dictionary = snapshot.get("operator", {})
 	_operator_can_deploy = bool(snapshot.get("operator_can_deploy", false))
 	var op_text: String = "OFF"

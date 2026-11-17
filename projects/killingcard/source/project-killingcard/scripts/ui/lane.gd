@@ -437,7 +437,7 @@ func _slot_hit(global_pos: Vector2, inspect: bool = false) -> Array:
 	if slot != null and slot.kind == slot.Kind.UNIT:
 		return [slot.side, slot.slot_uid]
 	if slot != null and slot.kind == slot.Kind.INCOMING:
-		return [&"incoming", -1]
+		return [&"incoming", slot.slot_uid]  # kc-feedback: a SPOTTED card's uid (inspect), else -1
 	if (_tile as Control).get_rect().has_point(local):
 		# kc-v2-ui: the Terrain chip is its own target (tap = its rule, long press = its inspector).
 		if _tile.terrain_hit(local - (_tile as Control).position):
@@ -462,7 +462,7 @@ func set_lane(lane: Dictionary) -> void:
 	_tile.set_tile(lane)
 	var enemy: Array = lane.get("enemy", [])
 	var friendly: Array = lane.get("friendly", [])
-	_fill_line(_enemy_slots, enemy, &"enemy", int(lane.get("incoming", 0)), lane.get("revealed", []))
+	_fill_line(_enemy_slots, enemy, &"enemy", int(lane.get("incoming", 0)), lane.get("revealed", []), lane.get("spotted", []))
 	_fill_line(_friendly_slots, friendly, &"player", 0)
 	_animate_changes(enemy, friendly)
 	_place_badge()
@@ -532,14 +532,19 @@ func show_callout(text: String, slot_side: StringName = &"player") -> void:
 
 
 ## revealed (f03): names behind the hidden plays (Recon Drone / Callout), one per incoming slot.
-func _fill_line(slots: Array[Node], units: Array, slot_side: StringName, incoming: int, revealed: Array = []) -> void:
+## spotted (kc-feedback): the same plays as card entries: those slots show the real card (SPOTTED).
+func _fill_line(slots: Array[Node], units: Array, slot_side: StringName, incoming: int, revealed: Array = [],
+		spotted: Array = []) -> void:
 	for i: int in slots.size():
 		var slot: Node = slots[i]
 		if i < units.size():
 			slot.show_unit(units[i], slot_side, i == 0)
 		elif i < units.size() + incoming:
 			var k: int = i - units.size()
-			slot.show_incoming(String(revealed[k]) if k < revealed.size() else "")
+			if k < spotted.size() and spotted[k] is Dictionary and not (spotted[k] as Dictionary).is_empty():
+				slot.show_spotted(spotted[k])
+			else:
+				slot.show_incoming(String(revealed[k]) if k < revealed.size() else "")
 		else:
 			slot.show_empty(slot_side)
 
