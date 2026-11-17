@@ -10,6 +10,8 @@
 #     plays, the recap or a sheet is up, the inspector or the pause menu is open);
 #   - an entry whose anchor is gone or hidden when its turn comes is dropped, NOT marked seen (it
 #     comes back the next time that thing is on screen); entries of a previous scene are dropped;
+#   - kc-feedback: every callout has a real on-screen target (no anchor = it waits), highlighted and
+#     linked to its bubble by an arrow (concept_callout.gd);
 #   - the callout swallows every input while it is up (it never passes a tap to the game).
 #   Headless runs never show callouts on their own (auto_show) so screen tests tap through as before;
 #   the concept tests switch it on.
@@ -310,9 +312,9 @@ func _rect_of(a: Variant) -> Variant:
 			return null
 		a = (a as Callable).call()
 	if a == null:
-		return Rect2()  # no anchor: a centred bubble
+		return null  # kc-feedback: every tip points at a real thing; no anchor = not now (not seen)
 	if a is Rect2:
-		return a
+		return a if (a as Rect2).size.x >= 2.0 and (a as Rect2).size.y >= 2.0 else null
 	if a is Control:
 		var c: Control = a
 		if not is_instance_valid(c) or not c.is_inside_tree() or not c.is_visible_in_tree():

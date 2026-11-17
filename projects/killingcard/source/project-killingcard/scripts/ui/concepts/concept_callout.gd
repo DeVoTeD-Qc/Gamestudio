@@ -1,8 +1,11 @@
 # concept_callout.gd
 # Purpose: kc-ui-pass: one "explain once" callout (ConceptGuide shows it). A small bubble with the
-#   concept's title, 1-2 plain sentences, GOT IT and TIPS OFF, anchored beside the thing it explains
-#   (an amber ring around it, a soft dim elsewhere). Placement never covers the target or the
-#   `avoid` rects (READY ...) when the screen has room anywhere else.
+#   concept's title, 1-2 plain sentences, GOT IT and TIPS OFF, anchored beside the thing it explains.
+#   kc-feedback (head: "every tip should have a clear highlight and link to the thing it's explaining"):
+#   the target gets a thick pulsing amber ring with a glow, the rest of the screen is dimmed, and an
+#   arrow (leader line with an arrowhead, dark-outlined so it reads on any art) runs from the bubble
+#   to the ring. Every callout has a real target (ConceptGuide drops one without). Placement never
+#   covers the target or the `avoid` rects (READY ...) when the screen has room anywhere else.
 #   Input (head: "an overlay made me press Ready by accident"): while it is up it SWALLOWS every
 #   pointer and key event in _input (it is the last node under the root, so it sees them first):
 #   nothing reaches the game. A release anywhere dismisses it, but only for a press that began while
@@ -18,12 +21,19 @@ signal dismissed(tips_off: bool)
 const AMBER: Color = Color("#FFB020")
 const INK: Color = Color("#F2F5F7")
 const FACE: Color = Color("#1B2127")
-const DIM: Color = Color(0.0, 0.0, 0.0, 0.42)
+const DIM: Color = Color(0.0, 0.0, 0.0, 0.5)
+const OUTLINE: Color = Color(0.0, 0.0, 0.0, 0.75)
+## The ring sits this far outside the target; the arrow's tip stops on it.
+const RING_PAD: float = 6.0
+const RING_W: float = 4.0
+const ARROW_W: float = 3.5
+const ARROW_HEAD: float = 13.0
 ## A press must start this long after the callout appeared to count (no accidental double tap).
 const ARM_S: float = 0.35
 ## After closing, pointer events are still eaten this long (the rest of the dismissing tap).
 const LINGER_S: float = 0.3
-const GAP: float = 14.0
+## Room between the bubble and its target, for the arrow (kc-feedback: it must be visible).
+const GAP: float = 30.0
 const MARGIN: float = 12.0
 const TITLE_FONT: Font = preload("res://assets/fonts/Barlow-Medium.ttf")
 
@@ -41,6 +51,7 @@ var _body: Label = null
 var _got_it: Button = null
 var _tips_off: Button = null
 var _placed: bool = false
+var _pulse: float = 0.0
 
 
 func _init() -> void:
@@ -194,6 +205,9 @@ func get_tips_off() -> Button:
 
 func _process(delta: float) -> void:
 	age += delta
+	if not closing and _placed and target.size != Vector2.ZERO:
+		_pulse = 0.5 + 0.5 * sin(age * 4.5)
+		queue_redraw()
 	if closing:
 		_linger -= delta
 		if _linger <= 0.0:
@@ -207,20 +221,75 @@ func _draw() -> void:
 	if target.size == Vector2.ZERO:
 		draw_rect(vr, DIM)
 		return
-	var hole: Rect2 = target.grow(6.0).intersection(vr)
-	# The dim around the hole (4 rects), then the ring.
+	var hole: Rect2 = ring_rect()
+	# The dim around the hole (4 rects).
 	draw_rect(Rect2(0, 0, vr.size.x, hole.position.y), DIM)
 	draw_rect(Rect2(0, hole.end.y, vr.size.x, vr.size.y - hole.end.y), DIM)
 	draw_rect(Rect2(0, hole.position.y, hole.position.x, hole.size.y), DIM)
 	draw_rect(Rect2(hole.end.x, hole.position.y, vr.size.x - hole.end.x, hole.size.y), DIM)
-	draw_rect(hole, AMBER, false, 3.0)
-	# A short pointer from the bubble's nearest edge to the ring.
-	var b: Rect2 = bubble_rect()
-	var from: Vector2 = Vector2(clampf(hole.get_center().x, b.position.x + 12, b.end.x - 12), clampf(hole.get_center().y, b.position.y + 12, b.end.y - 12))
+	# The highlight: a soft pulsing glow, then a thick amber ring with a dark keyline.
+	for i: int in 3:
+		var g: float = 4.0 + 4.0 * i
+		draw_rect(hole.grow(g), Color(AMBER, (0.30 - 0.08 * i) * (0.55 + 0.45 * _pulse)), false, 4.0)
+	draw_rect(hole.grow(RING_W * 0.5 + 1.0), OUTLINE, false, 1.5)
+	draw_rect(hole, AMBER, false, RING_W)
+	# The link: an arrow from the bubble's edge to the ring.
+	var c: Dictionary = connector()
+	if c.is_empty():
+		return
+	var from: Vector2 = c["from"]
+	var to: Vector2 = c["to"]
+	var dir: Vector2 = (to - from).normalized()
+	var base: Vector2 = to - dir * ARROW_HEAD
+	var side: Vector2 = Vector2(-dir.y, dir.x) * ARROW_HEAD * 0.6
+	var head: PackedVector2Array = [to, base + side, base - side]
+	draw_line(from, base, OUTLINE, ARROW_W + 3.0)
+	draw_colored_polygon(PackedVector2Array([to + dir * 1.5, base + side * 1.25 - dir * 1.5, base - side * 1.25 - dir * 1.5]), OUTLINE)
+	draw_line(from, base, AMBER, ARROW_W)
+	draw_colored_polygon(head, AMBER)
+	draw_circle(from, 5.0, OUTLINE)
+	draw_circle(from, 3.5, AMBER)
+
+
+## The highlighted rect: the target plus RING_PAD, kept on screen.
+func ring_rect() -> Rect2:
+	return target.grow(RING_PAD).intersection(Rect2(Vector2.ZERO, size)) if size != Vector2.ZERO else target.grow(RING_PAD)
+
+
+## kc-feedback: the arrow, {from: a point on the bubble's edge, to: the point of the ring it points at}
+## ({} when there is no target, or the bubble sits on the ring). Tests read it.
+func connector() -> Dictionary:
+	if target.size == Vector2.ZERO or _bubble == null:
+		return {}
+	return connector_points(bubble_rect(), ring_rect())
+
+
+## Pure geometry (tests): the arrow from bubble rect `b` to ring rect `hole`: it leaves the bubble from
+## the point of its edge nearest the ring and ends on the ring, aimed at the ring's nearest point.
+static func connector_points(b: Rect2, hole: Rect2) -> Dictionary:
+	if not b.has_area() or not hole.has_area():
+		return {}
+	var hc: Vector2 = hole.get_center()
+	# The bubble point nearest the ring (its edge, facing the target).
+	var from: Vector2 = Vector2(clampf(hc.x, b.position.x + 10.0, b.end.x - 10.0), clampf(hc.y, b.position.y + 10.0, b.end.y - 10.0))
 	var to: Vector2 = Vector2(clampf(from.x, hole.position.x, hole.end.x), clampf(from.y, hole.position.y, hole.end.y))
-	if from.distance_to(to) > 4.0:
-		draw_line(from, to, AMBER, 2.0)
-		draw_circle(to, 4.0, AMBER)
+	if hole.has_point(from) or b.has_point(to):
+		# Overlapping (a target too big for any side): from the bubble's edge toward the ring's centre.
+		to = Vector2(clampf(hc.x, hole.position.x, hole.end.x), clampf(hc.y, hole.position.y, hole.end.y))
+		var edge: Vector2 = Vector2(clampf(hc.x, b.position.x, b.end.x), hc.y if hc.y >= b.position.y and hc.y <= b.end.y else (b.position.y if hc.y < b.position.y else b.end.y))
+		from = edge
+	# Snap `from` onto the bubble's border facing `to`.
+	if to.y >= b.end.y:
+		from.y = b.end.y
+	elif to.y <= b.position.y:
+		from.y = b.position.y
+	elif to.x >= b.end.x:
+		from.x = b.end.x
+	elif to.x <= b.position.x:
+		from.x = b.position.x
+	if from.distance_to(to) < 4.0:
+		return {}
+	return {"from": from, "to": to}
 
 
 ## Every pointer / key event stops here while the callout is up (and for LINGER_S after).
