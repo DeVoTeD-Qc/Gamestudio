@@ -20,6 +20,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  const wait=async(pred,what,ms=120000)=>{const t0=Date.now();while(Date.now()-t0<ms){const s=await st();if(s&&pred(s))return s;await sleep(150)}throw new Error('timeout: '+what+' '+JSON.stringify(await st()).slice(0,300))};
  const click=async it=>{await page.mouse.click(it.x+it.w/2,it.y+it.h/2);await sleep(300)};
  const find=(s,f)=>(s.items||[]).find(f);
+ // ui-pass-3: explain-once callouts (title, map, street) are dismissed with Got it before the next tap
+ const clear=async()=>{for(let k=0;k<8;k++){await sleep(1100);const x=await st();const ok=x&&find(x,i=>i.type==='button'&&i.name==='HintOk');if(!ok)return;await click(ok)}};
  const pick=x=>({hp:x.hp,wave:x.wave,pile:x.pile,points:x.points,street:x.street,stacks:x.stacks,active:x.active,resolved:x.resolved,phase:x.phase});
  const crash=async()=>{
   if(ENG==='chromium'){const cs=await ctx.newCDPSession(page);cs.send('Page.crash').catch(()=>{});await sleep(1500);return 'reload'}
@@ -30,8 +32,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  await page.goto(url);let s=await wait(x=>x.screen==='TITLE','title');
  for(let round=1;round<=ROUNDS;round++){
   const cont=find(s,i=>i.type==='button'&&/^CONTINUE RUN/.test(i.text));
-  if(cont&&round>1){await click(cont);s=await wait(x=>x.screen!=='TITLE','resumed')}
-  else{await click(find(s,i=>i.type==='button'&&i.text.startsWith('Start run')));s=await wait(x=>x.screen==='MAP','map');
+  if(round===1||cont)await clear();
+  if(cont&&round>1){await click(find(await st(),i=>i.type==='button'&&/^CONTINUE RUN/.test(i.text)));s=await wait(x=>x.screen!=='TITLE','resumed')}
+  else{await click(find(await st(),i=>i.type==='button'&&i.text.startsWith('Start run')));s=await wait(x=>x.screen==='MAP','map');await clear();
    await click(find(s,i=>i.type==='button'&&i.text.startsWith('Enter')));s=await wait(x=>x.screen==='STREET','street')}
   // play: dismiss banners / hints, attack zombies
   let moves=0;for(let k=0;k<60&&moves<4+round;k++){s=await st();if(s.banner_open){await page.mouse.click(422,4);await sleep(400);continue}
@@ -51,7 +54,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const c2=find(s,i=>i.type==='button'&&/^CONTINUE RUN/.test(i.text));
   if(!c2){fails.push(`round ${round}: NO CONTINUE after crash-reload`);console.log('  FAIL no Continue; title buttons:',(s.items||[]).filter(i=>i.type==='button').map(i=>i.text).join(' | '));
    s=await st();continue}
-  await click(c2);s=await wait(x=>x.screen==='STREET'||x.screen==='MAP'||x.screen==='SAFEHOUSE','resumed');await sleep(800);s=await st();
+  await clear();await click(find(await st(),i=>i.type==='button'&&/^CONTINUE RUN/.test(i.text)));s=await wait(x=>x.screen==='STREET'||x.screen==='MAP'||x.screen==='SAFEHOUSE','resumed');await sleep(800);s=await st();
   const got=pick(s);const same=JSON.stringify(got)===JSON.stringify(want);console.log(`  resumed ${same?'SAME':'DIFFERENT'}:`,JSON.stringify(got));
   if(!same)fails.push(`round ${round}: resumed state differs: want ${JSON.stringify(want)} got ${JSON.stringify(got)}`);
   // back to the title for the next round: reload normally
