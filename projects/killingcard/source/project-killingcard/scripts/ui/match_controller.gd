@@ -329,8 +329,9 @@ func start_run_match(m: MatchState) -> bool:
 func _play(m: MatchState, squad: SquadData) -> void:
 	state = m
 	# kc-onboard-ui: run matches and the tutorial reveal systems step by step; a quick match and the
-	# pitch build show everything (RevealGate).
-	RevealGate.active = (is_run_match or _is_tutorial()) and not PitchDecks.active()
+	# private pitch build behaves exactly like the public one here (the head: "same as newcomer build");
+	# only the Quick Match shows everything (RevealGate).
+	RevealGate.active = is_run_match or _is_tutorial()
 	if not tree_exiting.is_connected(_reveal_off):
 		tree_exiting.connect(_reveal_off)
 	# The enemy AI (p07): deterministic, its only randomness is seeded from the match seed.

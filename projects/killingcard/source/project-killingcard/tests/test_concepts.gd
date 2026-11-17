@@ -396,3 +396,51 @@ func test_gentle_opening_only_reorders_the_deck() -> void:
 			if s.deck[k].is_unit():
 				hand_min = mini(hand_min, s.deck[k].cost)
 		assert_eq(hand_min, cheapest, "seed %d: the opening hand holds the cheapest unit" % seed_value)
+
+
+# --- 5. parked features -------------------------------------------------------------------------
+
+## Studio head (Nov 2026): "I'm not even sure we need that feature at all." The PREVIEW (forecast)
+## eye is parked behind UiFeatures.FORECAST_EYE: hidden in every match, never explained, not in the
+## Glossary, and P does not turn it on. (test_outcome_preview keeps the parked code itself tested.)
+func test_forecast_eye_is_parked_everywhere() -> void:
+	if UiFeatures.FORECAST_EYE:
+		return
+	var g: Node = _begin()
+	assert_false(ConceptRegistry.has(&"preview"), "no Forecast concept while parked")
+	assert_false(ConceptRegistry.ids().has(&"preview"), "not in the concept list")
+	var Glossary: GDScript = load("res://scripts/ui/codex/glossary.gd")
+	for e: Dictionary in Glossary.entries():
+		assert_false(StringName(e.get("concept", &"")) == &"preview" or String(e["name"]).begins_with("Forecast"),
+				"the Glossary does not list the forecast (%s)" % e["name"])
+	var saved_size: Vector2i = tree.root.size
+	tree.root.size = Vector2i(1280, 720)
+	var vp := SubViewport.new()
+	vp.size = Vector2i(Layout.logical_size(Layout.PHONE))
+	vp.disable_3d = true
+	vp.handle_input_locally = true
+	tree.root.add_child(vp)
+	var m: Control = (load(MATCH_SCENE) as PackedScene).instantiate()
+	vp.add_child(m)
+	await _frames(4)
+	var c: Node = m.get_node("%MatchController")
+	if c.is_mulligan_open():
+		c.keep_hand()
+	await _frames(2)
+	# A quick match shows everything else (RevealGate off), and still no eye.
+	assert_false(RevealGate.active, "a quick match reveals everything")
+	assert_false(m.get_preview_button().is_visible_in_tree(), "no PREVIEW eye, even in a quick match")
+	assert_false(g.notice(&"preview", m.get_preview_button()), "the forecast is never explained")
+	var e := InputEventKey.new()
+	e.keycode = KEY_P
+	e.physical_keycode = KEY_P
+	e.pressed = true
+	vp.push_input(e)
+	await _frames(2)
+	assert_false(m.get_preview().enabled or m.get_preview().visible, "P does not turn the forecast on")
+	c.refresh()
+	await _frames(1)
+	assert_false(m.get_preview_button().is_visible_in_tree(), "still hidden after a redraw")
+	vp.queue_free()
+	tree.root.size = saved_size
+	_end()

@@ -4,6 +4,8 @@
 #   EventBus.preview_toggled; the cards show exactly OutcomeForecast's numbers, follow plays and
 #   UNDO live, hide while the round plays and come back for the next Deploy; taps pass through
 #   the cards to the lanes; text >= 11 pt, the toggle >= 44 pt, nothing clipped or off screen.
+#   Parked (UiFeatures.FORECAST_EYE false): the eye is hidden and P does nothing; the rest of the
+#   checks show the eye by hand so the parked feature stays ready to come back.
 # Author: UI/UX Agent (p12)
 extends "res://tests/test_case.gd"
 
@@ -55,6 +57,15 @@ func _toggle_and_readability(screen: Dictionary) -> void:
 	var button: Button = m.get_preview_button()
 	var k: float = Layout.points_per_px(screen)
 	assert_false(preview.visible, "%s preview starts off" % label)
+	if not UiFeatures.FORECAST_EYE:
+		# Parked (studio head, Nov 2026): the eye is hidden and P does nothing, so a player can never
+		# turn the forecast on. Below, the eye is shown by hand to keep the parked code tested.
+		assert_false(button.is_visible_in_tree(), "%s PREVIEW eye hidden while parked" % label)
+		await _key(vp, KEY_P)
+		assert_false(preview.enabled or preview.visible, "%s P does nothing while parked" % label)
+		assert_eq(_toggles, [] as Array[bool], "%s no preview_toggled while parked" % label)
+		button.visible = true
+		await _frames(1)
 	assert_eq(button.text.strip_edges(), "OFF", "%s strip badge says OFF (kc-board2: eye glyph over the word)" % label)
 	# Tap the toggle (real input).
 	await _tap(vp, button.get_global_rect().get_center())
@@ -96,8 +107,12 @@ func _toggle_and_readability(screen: Dictionary) -> void:
 	var tap_pt: float = minf(button.size.x, button.size.y) * k
 	assert_true(tap_pt >= Layout.MIN_TAP_PT - 0.01, "%s toggle is %.1f pt" % [label, tap_pt])
 	print("     [%s] preview text >= %.1f pt, toggle %.1f pt" % [label, min_pt, tap_pt])
-	# P key turns it off again.
-	await _key(vp, KEY_P)
+	# P key turns it off again (parked: P is off, so the code path is called directly).
+	if UiFeatures.FORECAST_EYE:
+		await _key(vp, KEY_P)
+	else:
+		preview.set_enabled(false)
+		await _frames(1)
 	assert_false(preview.enabled or preview.visible, "%s P turns it off" % label)
 	assert_eq(_toggles, [true, false] as Array[bool], "%s EventBus.preview_toggled(false)" % label)
 	assert_false(button.button_pressed, "%s button released" % label)

@@ -5,6 +5,7 @@
 #   - in the public build AND with the private pitch active (PitchDecks.forced), a run's first match
 #     plays exactly the starter the Loadout screen shows (StarterPanel.grouped_starter): the same
 #     card multiset in the player's deck + hand; the pitch swaps reach only the Quick Match;
+#   - the pitch build's run match reveals step by step exactly like the public build (RevealGate);
 #   - the starter is mostly units, one Tactic kind, no Field;
 #   - Tactic and Field have different type icons (CardLook.type_icon_id / draw_type_icon).
 # Author: UI/UX Agent (kc-deck-match)
@@ -73,6 +74,12 @@ func test_first_run_match_plays_the_shown_starter() -> void:
 		var m: MatchState = rs.create_match()
 		assert_true(c.start_run_match(m), "%s: the run match starts" % label)
 		assert_false(c.pitch_swaps_apply(), "%s: no showcase swaps in a run match" % label)
+		# Studio head (Nov 2026, "same as newcomer build"): the pitch's run reveals step by step
+		# like the public build: round 1 has no initiative chip, tips and the declutter apply.
+		assert_true(RevealGate.active, "%s: a run match reveals step by step" % label)
+		await _frames(2)
+		var chip: Control = screen.get_initiative_chip()
+		assert_true(chip == null or not chip.visible or chip.get_text() == "", "%s: no initiative chip in round 1" % label)
 		var me: RulesSide = c.state.sides[0]
 		var played: Dictionary = _multiset(me.deck + me.hand)
 		assert_eq(played, shown, "%s: match 1 deck + hand = the starter shown (%s)" % [label, played])

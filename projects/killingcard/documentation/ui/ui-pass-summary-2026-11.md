@@ -143,3 +143,28 @@ a fixed event) already existed and is unchanged.
    rename it "PRACTICE MATCH", or retire it once playtests confirm the in-run tips are enough?
 3. **The PREVIEW (forecast) eye.** It is hidden during the first run and explained when it first
    appears. Should it stay hidden until a run is won, or come back sooner?
+
+## Studio head answers (17 Nov 2026) and what changed
+
+1. **Tip pace in the first match:** keep it as is (4 in a row). No change.
+2. **The drill:** keep it optional for now. It may be retired later if human playtests show the tips
+   are enough. No change.
+3. **The PREVIEW (forecast) eye:** "I'm not even sure we need that feature at all." It is now
+   parked, for every run and every build:
+   - One switch: `UiFeatures.FORECAST_EYE` (`scripts/ui/ui_features.gd`), set to `false`.
+   - While it is off:
+     - the eye is hidden in every match (quick match too) and P does nothing;
+     - the "Forecast" concept is not in `ConceptRegistry`, so no tip ever explains it and the
+       Glossary's BASICS tab does not list it (76 concepts while it is parked);
+     - the eye is left out of the match's key controls.
+   - The overlay code (`outcome_preview.gd`, `OutcomeForecast`) is untouched and still tested.
+     Setting the switch to `true` brings the whole feature back as it was.
+4. **The pitch build:** "Yes, same as newcomer build." The `--pitch` build no longer forces
+   "show everything" in run matches (`match_controller.gd`: RevealGate was off whenever
+   `PitchDecks.active()`). A pitch run now behaves exactly like the public build for a newcomer:
+   - no initiative chip in a run's round 1;
+   - the first-run decluttering;
+   - the tips;
+   - the gentle opening.
+   Only the licensed art (and the Quick Match's showcase decks) remain pitch-only.
+   `test_deck_match` checks this for both builds.

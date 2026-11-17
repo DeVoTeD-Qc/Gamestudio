@@ -225,6 +225,8 @@ static func for_unit(u: RulesUnit) -> Array[StringName]:
 static func _build() -> void:
 	var d: Dictionary = {}
 	for id: StringName in CORE:
+		if id == &"preview" and not UiFeatures.FORECAST_EYE:
+			continue  # the PREVIEW eye is parked: never explained, not in the Glossary
 		var row: Array = CORE[id]
 		d[id] = {"id": id, "title": row[0], "text": row[1], "trigger": row[2],
 				"group": GROUP_RUN if _is_run(id) else GROUP_MATCH}

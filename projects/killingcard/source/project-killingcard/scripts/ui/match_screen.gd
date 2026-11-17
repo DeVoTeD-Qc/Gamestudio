@@ -323,10 +323,11 @@ func show_snapshot(snapshot: Dictionary) -> void:
 	# kc-ui-pass (head: "not overwhelming"): in a run's round 1 the initiative flag / chip is noise
 	# (nobody is behind yet): it shows from round 2 and is explained once then. In the player's first
 	# run the PREVIEW eye (an expert forecast) stays hidden. Quick matches and tools show both.
+	# The head (Nov 2026): the PREVIEW eye is parked: hidden everywhere while UiFeatures.FORECAST_EYE is off.
 	if RevealGate.active and int(snapshot.get("round", 1)) <= 1 and not (snapshot.get("initiative", {}) as Dictionary).is_empty():
 		snapshot = snapshot.duplicate()
 		snapshot["initiative"] = {}
-	_preview_button.visible = not (RevealGate.active and first_run())
+	_preview_button.visible = UiFeatures.FORECAST_EYE and not (RevealGate.active and first_run())
 	_score_bar.set_score(snapshot)
 	_minimap.set_intel(snapshot.get("lanes", []))
 	_board.set_lanes(snapshot.get("lanes", []))
@@ -772,6 +773,8 @@ func get_key_controls() -> Dictionary:
 		"streak": _streak_badge, "minimap": _rival_badge, "preview": _preview_button, "deck": _deck_badge,
 		"board": _board, "supply": _supply_box,
 	}
+	if not UiFeatures.FORECAST_EYE:
+		out.erase("preview")  # the parked PREVIEW eye is never on screen
 	if rival_in_score():
 		# kc-fight-ui: the phone's SCORE badge carries the rival hand; the trait rail takes the slot.
 		out.erase("minimap")

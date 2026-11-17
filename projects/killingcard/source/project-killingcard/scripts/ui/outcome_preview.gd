@@ -12,6 +12,8 @@
 #   the round plays and under the mulligan panel.
 #   Toggle: the PREVIEW button in the top bar, or P (toggle_preview). Each change emits
 #   EventBus.preview_toggled(enabled) (the playtest log records it, p16).
+#   Parked (studio head, Nov 2026): while UiFeatures.FORECAST_EYE is false the button is hidden and
+#   P does nothing, so the player can never turn it on (set_enabled still works for tests / QA).
 #   Display only: every Control here ignores the mouse, so taps reach the lanes underneath.
 # Dependencies: OutcomeForecast, match_screen.gd (parent: get_board / get_preview_button /
 #   snapshot_shown), match_controller.gd (sibling MatchController: state, is_busy,
@@ -69,7 +71,7 @@ func _wire() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"toggle_preview") and not event.is_echo():
+	if UiFeatures.FORECAST_EYE and event.is_action_pressed(&"toggle_preview") and not event.is_echo():
 		get_viewport().set_input_as_handled()
 		set_enabled(not enabled)
 

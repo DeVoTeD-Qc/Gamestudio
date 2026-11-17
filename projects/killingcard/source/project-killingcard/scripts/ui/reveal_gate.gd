@@ -4,8 +4,9 @@
 #   uses it right now (RevealFlags.visible(flag, met, now)). The met set is the profile's
 #   (Settings.met_flags, fed by RunState.note_systems). shown() is the one call the screens make.
 #   Contexts: run screens and run / tutorial matches reveal step by step (`active`); the quick
-#   match, the pitch build's sandbox and tools show everything (the match controller sets `active`
-#   per match: a quick match is for players who know the game, and a pitch must show it all).
+#   match and tools show everything (the match controller sets `active` per match: a quick match is
+#   for players who know the game). The private pitch build behaves like the public one (studio head,
+#   Nov 2026: "same as newcomer build"); only its art differs.
 # Dependencies: RevealFlags, the Settings autoload (met_flags; optional).
 # Author: UI/UX Agent (kc-onboard-ui)
 class_name RevealGate
