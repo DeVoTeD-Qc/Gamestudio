@@ -326,9 +326,69 @@ func create_match(hooks: MatchHooks = null) -> MatchState:
 		return null
 	var h: MatchHooks = hooks if hooks != null else MatchHooks.new()
 	h.mode_rules = ModeRules.create(md.mode, config)
-	var m: MatchState = MatchState.new(config, md.map, player_setup(), enemy_setup(), match_seed(), h)
+	var ps: SideSetup = player_setup()
+	if map != null and map.first_run and history.is_empty():
+		gentle_opening(ps, match_seed(), config.opening_hand + config.round1_extra_draw)
+	var m: MatchState = MatchState.new(config, md.map, ps, enemy_setup(), match_seed(), h)
 	configure_match(m)  # kc-v2-impl: Terrain, boss rule, modifiers
 	return m
+
+
+## kc-ui-pass (head: "make the first run gentle for newcomers", no rule changes): the very first fight
+## of a first run deals from a seeded shuffle arranged so the opening hand holds a unit you can pay
+## for in round 1 and one for round 2 (the cheapest units of the deck). Only the ORDER of the deck
+## changes (SideSetup.keep_deck_order, as the drill does); the cards, the rules and the mulligan are
+## the same. The parallel arrays (arts, traits) move with their cards.
+static func gentle_opening(s: SideSetup, seed_value: int, hand_n: int) -> void:
+	var n: int = s.deck.size()
+	if n == 0 or hand_n <= 0:
+		return
+	var order: Array[int] = []
+	for i: int in n:
+		order.append(i)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = derive_seed(seed_value, "gentle", 0)
+	for i: int in range(n - 1, 0, -1):
+		var j: int = rng.randi_range(0, i)
+		var t: int = order[i]
+		order[i] = order[j]
+		order[j] = t
+	# Bring the cheapest unit, then the next cheapest unit, into the opening hand (if not there).
+	var units: Array[int] = []
+	for k: int in n:
+		if s.deck[k].is_unit():
+			units.append(k)
+	units.sort_custom(func(a: int, b: int) -> bool: return s.deck[a].cost < s.deck[b].cost)
+	var wanted: Array[int] = units.slice(0, 2)
+	for t: int in wanted:
+		if order.find(t) < hand_n:
+			continue
+		var worst: int = -1
+		for k: int in mini(hand_n, n):
+			if wanted.has(order[k]):
+				continue
+			if worst < 0 or s.deck[order[k]].cost > s.deck[order[worst]].cost:
+				worst = k
+		if worst < 0:
+			break
+		var pos: int = order.find(t)
+		order[pos] = order[worst]
+		order[worst] = t
+	var deck: Array[CardData] = []
+	var arts: Array[StringName] = []
+	var traits: Array[StringName] = []
+	for k: int in n:
+		deck.append(s.deck[order[k]])
+		if order[k] < s.deck_arts.size():
+			arts.append(s.deck_arts[order[k]])
+		if order[k] < s.deck_traits.size():
+			traits.append(s.deck_traits[order[k]])
+	s.deck = deck
+	if arts.size() == n:
+		s.deck_arts = arts
+	if traits.size() == n:
+		s.deck_traits = traits
+	s.keep_deck_order = true
 
 
 # =============================================================================
