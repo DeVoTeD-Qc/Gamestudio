@@ -671,7 +671,8 @@ func _rebuild_text(box: Rect2) -> void:
 		text = ""
 	# kc-hand-y2: no effect at all: a lore line, italic dark grey, at the bottom of the box.
 	var lore: String = ""
-	if text == "" and rows == 0:
+	# kc-ui-pass: "no_lore" (the mulligan) keeps the box empty: flavour is noise in a quick decision.
+	if text == "" and rows == 0 and not bool(data.get("no_lore", false)):
 		lore = String(data.get("lore", ""))
 		if lore == "":
 			lore = CardLore.line(StringName(String(data.get("id", ""))), bool(data.get("standard_issue", false)), has_stats_bar())

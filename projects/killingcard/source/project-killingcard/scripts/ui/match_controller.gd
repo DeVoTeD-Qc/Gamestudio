@@ -745,6 +745,8 @@ func notice_concepts(snap: Dictionary = {}) -> void:
 			if slot == null:
 				continue
 			guide.notice(&"stats", slot, avoid)
+			if si == me_side and MatchSnapshot.can_move(state, me_side, u):
+				guide.notice(&"move", slot, avoid)
 			guide.notice_all(ConceptRegistry.for_unit(u), slot, avoid)
 			if u.armor < u.max_armor(state.round_number):
 				guide.notice(&"damaged", slot, avoid)
@@ -1126,6 +1128,9 @@ func open_mulligan() -> void:
 		# kc-cards-impl: the Y2+ face (art, trait, Standard Issue tag).
 		var view: Dictionary = card_view_for(rc)
 		view.erase("cant_pay")
+		# kc-ui-pass: a plain unit's flavour line is noise in the swap decision (the inspector keeps it).
+		if rc.card.is_unit() and rc.card.effects.is_empty():
+			view["no_lore"] = true
 		var art: BannerArt = BannerArtDB.get_art(StringName(String(state.art_by_uid.get(rc.uid, rc.card.id))))
 		# kc-ui4 (head naming): the name stays the card's (chassis) name; the art's name is its subname.
 		if BannerArtDB.is_card_art(art):

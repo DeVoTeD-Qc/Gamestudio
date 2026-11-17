@@ -24,7 +24,7 @@ signal shown(id: StringName)
 signal dismissed(id: StringName)
 
 const CalloutScript: GDScript = preload("res://scripts/ui/concepts/concept_callout.gd")
-const MAX_QUEUE: int = 6
+const MAX_QUEUE: int = 10
 ## A screen settles this long after the last notice / scene change before a callout opens.
 const SETTLE_S: float = 0.45
 ## At most this many callouts in one "beat" (a screen visit, or the stretch between two holds such as
@@ -125,7 +125,9 @@ func notice(id: StringName, anchor: Variant = null, avoid: Array = [], first: bo
 		if e["id"] == cid:
 			return false
 	if _queue.size() >= MAX_QUEUE:
-		return false
+		if not first:
+			return false
+		_queue.pop_back()  # a front entry always gets in
 	var e: Dictionary = {"id": cid, "anchor": anchor, "avoid": avoid, "scene": _scene_key()}
 	if first:
 		_queue.push_front(e)

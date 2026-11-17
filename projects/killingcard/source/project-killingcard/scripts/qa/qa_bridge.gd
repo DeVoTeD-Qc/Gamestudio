@@ -170,6 +170,9 @@ func snapshot(scene: Node = null) -> Dictionary:
 		return out
 	# kc-ui-pass: the concept callout on screen (id, bubble, GOT IT and TIPS OFF rects in CSS px).
 	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide != null:
+		out["concept_queue"] = {"ids": (guide.call(&"queued_ids") as Array).map(func(x: StringName) -> String: return String(x)),
+				"held": bool(guide.call(&"is_held"))}
 	if guide != null and guide.call(&"is_showing"):
 		var ci: Dictionary = guide.call(&"qa_info")
 		out["concept"] = {"id": ci["id"], "got_it": _css(ci["got_it"]), "tips_off": _css(ci["tips_off"]),

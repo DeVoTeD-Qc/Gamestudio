@@ -898,8 +898,9 @@ static func operator_rule(op: Dictionary) -> String:
 		var id: StringName = StringName(String(kw.get("id", "")))
 		if CardInfoScript.KEYWORD_RULES.has(id):
 			entries.append(CardInfoScript._entry(id, int(kw.get("value", 0))))
-	var respawn: String = "Back next Deploy if down." if bool(op.get("respawns", true)) else ""
-	return CardInfoScript.rule_lines_of(entries, respawn)
+	# kc-ui-pass: no "Back next Deploy if down." on the card any more (the Operator concept callout and
+	# the inspector say it); the card shows its abilities only.
+	return CardInfoScript.rule_lines_of(entries, "")
 
 
 ## The Operator's own frame (head B): brass border, dark brass fill, cut (rounded) corners like a

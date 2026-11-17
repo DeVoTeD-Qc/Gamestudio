@@ -369,8 +369,13 @@ func _operator_tile(item: LoadoutItem) -> Button:
 		what.clip_text = false
 		text.add_child(what)
 	else:
-		for pair: Array in [["P", "%s: %s" % [kit.get("passive_name", ""), kit.get("passive_text", "")], "KitPassive"],
-				["1x", "%s: %s" % [kit.get("ability_name", ""), kit.get("ability_text", "")], "KitAbility"]]:
+		# kc-ui-pass (head: "not overwhelming"): a locked Operator shows only how to unlock it; its kit
+		# is one long press away (the inspector), not two more paragraphs on a screen you can't use.
+		var kit_rows: Array = [["P", "%s: %s" % [kit.get("passive_name", ""), kit.get("passive_text", "")], "KitPassive"],
+				["1x", "%s: %s" % [kit.get("ability_name", ""), kit.get("ability_text", "")], "KitAbility"]]
+		if not bool(kit.get("unlocked", true)):
+			kit_rows = []
+		for pair: Array in kit_rows:
 			var row2: HBoxContainer = HBoxContainer.new()
 			row2.name = pair[2]
 			row2.add_theme_constant_override(&"separation", 6)

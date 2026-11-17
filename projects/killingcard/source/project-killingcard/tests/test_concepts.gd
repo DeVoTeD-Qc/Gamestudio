@@ -300,6 +300,32 @@ func test_callout_over_a_real_match_never_presses_ready() -> void:
 	_end()
 
 
+func test_mulligan_tip_comes_first_and_the_rest_waits_under_the_panel() -> void:
+	var g: Node = _begin()
+	var vp := SubViewport.new()
+	vp.size = Vector2i(Layout.logical_size(Layout.PHONE))
+	vp.disable_3d = true
+	tree.root.add_child(vp)
+	var m: Control = (load(MATCH_SCENE) as PackedScene).instantiate()
+	vp.add_child(m)
+	await _frames(4)
+	var c: Node = m.get_node("%MatchController")
+	if not c.is_mulligan_open():
+		c.open_mulligan()
+	await _frames(1)
+	assert_eq(g.peek_id(), &"mulligan", "the mulligan tip is first: %s" % [g.queued_ids()])
+	assert_false(g.is_held(), "and may open over the panel")
+	g.show_next()
+	g.dismiss()
+	await _frames(1)
+	assert_true(g.is_held(), "the other tips wait while the panel covers their anchors")
+	c.keep_hand()
+	await _frames(2)
+	assert_false(g.is_held(), "after KEEP HAND they may open")
+	vp.queue_free()
+	_end()
+
+
 func test_bubble_never_covers_target_or_avoid_at_phone_size() -> void:
 	var view: Vector2 = Vector2(1168, 540)
 	var bs: Vector2 = Vector2(420, 170)

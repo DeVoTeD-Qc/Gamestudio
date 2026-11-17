@@ -8,8 +8,9 @@
 #   Ids match the old progressive-reveal flags (RevealFlags: run_map, event, kw_pick, terrain_smoke ...)
 #   so a tip dismissed before this pass counts as seen (they share Settings.seen_flags).
 #   The callouts (ConceptGuide autoload), the Codex glossary and the drill all read this file.
-#   Keyword texts are not copied here: they come from CardInfo.KEYWORD_RULES (the inspector's words),
-#   so a keyword never reads one way in a tip and another way on the card.
+#   Keyword texts are not copied here: they come from CardInfo.KEYWORD_RULES (the callout uses the
+#   one-line rule the card and inspector print, "detail" the full rule the Glossary shows), so a
+#   keyword never reads one way in a tip and another way on the card.
 # Dependencies: card_info.gd, SynergyRules, TerrainRules, CardData, DataEnums.
 # Author: UI/UX Agent (kc-ui-pass)
 class_name ConceptRegistry
@@ -231,7 +232,7 @@ static func _build() -> void:
 		var row: Array = CardInfo.KEYWORD_RULES[kw]
 		var cid: StringName = keyword_concept(kw)
 		d[cid] = {"id": cid, "title": String(row[0]).replace(" %d", "").replace("%d", "N"),
-				"text": String(row[2]).replace("%d", "N"), "group": GROUP_KEYWORD,
+				"text": String(row[1]).replace("%d", "N"), "detail": String(row[2]).replace("%d", "N"), "group": GROUP_KEYWORD,
 				"trigger": "The first card with %s you see (hand, reward or a rival unit)." % String(row[0]).replace(" %d", "")}
 	for kw: StringName in EXTRA_KEYWORDS:
 		var cid: StringName = keyword_concept(kw)

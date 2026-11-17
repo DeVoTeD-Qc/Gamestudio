@@ -117,10 +117,8 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 	rule.add_theme_color_override(&"default_color", CardLook.RULE_COLOR)
 	rule.add_theme_constant_override(&"line_separation", -2)
 	var rule_text: String = String(entry.get("rule", ""))
-	if rule_text == "":
-		# A unit with no ability says so, dimmed (the lore is in the inspector).
-		rule_text = "No ability" if entry.has("fp") else ""
-		rule.add_theme_color_override(&"default_color", Color("#A3ADB5"))
+	# kc-ui-pass (head: "too noisy"): a unit with no ability shows no rule line at all (it used to say
+	# "No ability"); its FP and Armor say everything, the lore is in the inspector.
 	IconText.fill(rule, rule_text, RULE_PX, CardLook.RULE_COLOR if String(entry.get("rule", "")) != "" else Color("#A3ADB5"))
 	rule_plate.add_child(rule)
 	var sub: Label = Label.new()
@@ -136,12 +134,14 @@ static func build(entry: Dictionary, card_size: Vector2, _metric_h: float = 0.0,
 		face.position = Vector2(inset, inset)
 		face.size = panel.size - Vector2(inset, inset) * 2.0
 		# kc-layout-a: the rule lines take the bottom of the face; the X1 card is the rest.
-		var lines: int = int(panel.get_meta(&"rule_lines", 0)) if IconText.plain(rule) != "" else 0
+		# kc-ui-pass: a card with no rule keeps the same shape (its rule band stays, empty and unlit),
+		# so every card in the hand lines up; it just doesn't say "No ability" any more.
+		var lines: int = int(panel.get_meta(&"rule_lines", 0)) if IconText.plain(rule) != "" or entry.has("fp") else 0
 		var rule_h: float = minf(lines * RULE_LINE_H, maxf(0.0, face.size.y - 40.0))
 		if rule_h < RULE_LINE_H:
 			rule_h = 0.0
 		var core: Vector2 = Vector2(face.size.x, face.size.y - rule_h)
-		rule_plate.visible = rule_h > 0.0
+		rule_plate.visible = rule_h > 0.0 and IconText.plain(rule) != ""
 		rule_plate.position = Vector2(0, core.y)
 		rule_plate.size = Vector2(face.size.x, rule_h)
 		rule.position = Vector2(5, 1)

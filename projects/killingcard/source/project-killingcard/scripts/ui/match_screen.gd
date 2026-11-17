@@ -320,6 +320,13 @@ func _ready() -> void:
 
 ## Renders a full match snapshot (shape: mock_match_data.gd).
 func show_snapshot(snapshot: Dictionary) -> void:
+	# kc-ui-pass (head: "not overwhelming"): in a run's round 1 the initiative flag / chip is noise
+	# (nobody is behind yet): it shows from round 2 and is explained once then. In the player's first
+	# run the PREVIEW eye (an expert forecast) stays hidden. Quick matches and tools show both.
+	if RevealGate.active and int(snapshot.get("round", 1)) <= 1 and not (snapshot.get("initiative", {}) as Dictionary).is_empty():
+		snapshot = snapshot.duplicate()
+		snapshot["initiative"] = {}
+	_preview_button.visible = not (RevealGate.active and first_run())
 	_score_bar.set_score(snapshot)
 	_minimap.set_intel(snapshot.get("lanes", []))
 	_board.set_lanes(snapshot.get("lanes", []))
@@ -334,6 +341,8 @@ func show_snapshot(snapshot: Dictionary) -> void:
 	_set_badges(snapshot)
 	_reveal = snapshot.get("reveal", {})
 	if _initiative != null:
+		# kc-ui-pass: in a run's round 1 the initiative chip is noise (nobody is behind yet); it shows
+		# from round 2 (and is explained once then). Quick matches and tools show it always.
 		_initiative.set_info(snapshot.get("initiative", {}))
 	_set_synergy(snapshot.get("synergy", {}))
 	_follow_phase(snapshot)
@@ -601,6 +610,15 @@ func get_mulligan_panel() -> Control:
 ## p12 outcome preview overlay (scenes/match/OutcomePreview.tscn) and its strip toggle.
 func get_preview() -> Control:
 	return _preview
+
+
+## kc-ui-pass: true while the profile has not finished a run yet (Settings.run_profile).
+func first_run() -> bool:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	if st == null:
+		return false
+	var p: Variant = st.get(&"run_profile")
+	return not (p is Dictionary) or int((p as Dictionary).get("runs_finished", 0)) == 0
 
 
 func get_preview_button() -> Button:

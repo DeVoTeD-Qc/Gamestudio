@@ -26,6 +26,35 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_READY and get_node_or_null(^"BackdropArt") == null:
 		var bg: Node = get_node_or_null(^"Background")
 		CardArt.add_backdrop(self, &"menu", bg.get_index() + 1 if bg != null else 0)
+	if what == NOTIFICATION_READY:
+		resized.connect(_fit_panel)
+		_fit_panel.call_deferred()
+
+
+## kc-ui-pass: the 880 px sheet was cut off in phone portrait (390 pt wide). It now fits the screen
+## width (12 px margin each side), and each row of buttons shrinks to share it.
+func _fit_panel() -> void:
+	var panel: Control = get_node_or_null(^"Center/Panel") as Control
+	if panel == null or size.x <= 0.0:
+		return
+	if not panel.has_meta(&"base_w"):
+		panel.set_meta(&"base_w", panel.custom_minimum_size.x)
+	var w: float = minf(float(panel.get_meta(&"base_w")), size.x - 24.0)
+	panel.custom_minimum_size.x = w
+	for row: Node in panel.find_children("*", "HBoxContainer", true, false):
+		var buttons: Array[Button] = []
+		for c: Node in row.get_children():
+			if c is Button:
+				buttons.append(c)
+		if buttons.is_empty():
+			continue
+		var gap: float = float((row as HBoxContainer).get_theme_constant(&"separation"))
+		var room: float = (w - 64.0 - gap * (buttons.size() - 1)) / buttons.size()
+		for b: Button in buttons:
+			if not b.has_meta(&"base_w"):
+				b.set_meta(&"base_w", b.custom_minimum_size.x)
+			b.custom_minimum_size.x = minf(float(b.get_meta(&"base_w")), maxf(64.0, room))
+			b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if b.custom_minimum_size.x < float(b.get_meta(&"base_w")) else TextServer.AUTOWRAP_OFF
 
 
 func playtest_log() -> Node:
