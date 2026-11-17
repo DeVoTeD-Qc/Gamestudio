@@ -43,7 +43,7 @@ func _game() -> Node:
 
 func _click(m: Control, at: Vector2, press: bool = true, release: bool = true) -> void:
 	# past the callout's guard (a tap right as it opens is eaten without dismissing it)
-	await tree.create_timer(0.4).timeout
+	await tree.create_timer(0.65).timeout
 	var xf: Transform2D = m.get_viewport().get_final_transform()
 	if press:
 		var mb: InputEventMouseButton = InputEventMouseButton.new()
@@ -142,6 +142,8 @@ func test_one_at_a_time_marked_seen_never_twice() -> void:
 	eq(str(m.call("show_due_concept")), "district", "the map explains districts")
 	m.call("dismiss_hint")
 	await _settle()
+	eq(str(m.call("show_due_concept")), "", "1 per action: the survivor's skill waits for the player's next action")
+	m.call("player_acted")
 	check(str(m.call("show_due_concept")).begins_with("passive_"), "then the survivor's skill")
 	m.call("dismiss_hint")
 	# back to the title: hold-to-read is not explained again
@@ -182,7 +184,10 @@ func test_a_callout_never_triggers_a_game_action() -> void:
 		check(not co.call("is_open"), "%s: (closed)" % str(sz))
 		check(not co.call("is_open"), "%s: and it closed it" % str(sz))
 		check(_game().get("profile").concept_seen(id), "%s: and marked it seen" % str(sz))
-		# the next callout: a release left over from an earlier press does nothing at all
+		# the next callout (after the player's next action: 1 per action): a release left over from
+		# an earlier press does nothing at all
+		eq(str(m.call("show_due_concept")), "", "%s: 1 per action: nothing more until the player acts" % str(sz))
+		m.call("player_acted")
 		var id2: String = m.call("show_due_concept")
 		check(id2 != "" and id2 != id, "%s: the next concept (%s)" % [str(sz), id2])
 		await _settle()
@@ -194,6 +199,7 @@ func test_a_callout_never_triggers_a_game_action() -> void:
 		eq(_state(run), before, "%s: a tap on RUN under the callout didn't run" % str(sz))
 		check(not co.call("is_open"), "%s: it dismissed the callout" % str(sz))
 		# Got it (the button in the bubble) and Esc: the same, nothing happens to the run
+		m.call("player_acted")
 		var id3: String = m.call("show_due_concept")
 		if id3 != "":
 			await _settle()
@@ -204,6 +210,7 @@ func test_a_callout_never_triggers_a_game_action() -> void:
 		eq(_state(run), before, "%s: the run is exactly as before the callouts" % str(sz))
 		# while a finger is down, no callout opens (the release can't land on a button)
 		_game().get("profile").reset_concepts()
+		m.call("player_acted")
 		var xf: Transform2D = m.get_viewport().get_final_transform()
 		var mb: InputEventMouseButton = InputEventMouseButton.new()
 		mb.button_index = MOUSE_BUTTON_LEFT
@@ -236,6 +243,146 @@ func test_a_tap_as_it_opens_is_eaten_not_a_dismiss() -> void:
 	check(not _game().get("profile").concept_seen("inspect"), "and not marked seen")
 	await _click(m, Vector2(6, 6))
 	check(not co.call("is_open") and _game().get("profile").concept_seen("inspect"), "a later tap dismisses it")
+	await _done(m)
+
+
+# ---------------------------------------------------------------- follow-up (the head's answers)
+## The bug: a tap aimed at the WAVE banner that lands just after the banner closes dismissed the
+## first callout ("The street") unread. Now a callout opens only CONCEPT_GRACE_MS after a banner
+## closes and after the last pointer release, and a tap in its first GUARD_MS doesn't dismiss it.
+func test_a_tap_aimed_at_the_banner_never_dismisses_the_first_callout() -> void:
+	tree.root.size = Vector2i(390, 844)
+	var m: Control = _main()
+	await _settle()
+	m.call("apply_debug", {"screen": "street", "seed": "11", "hints": "1", "overlay": "banner"})
+	m.call("_render")
+	await _settle()
+	await tree.create_timer(0.1).timeout
+	await _settle()
+	check(bool(m.call("banner_open")), "the WAVE banner is up")
+	var prof: DDProfile = _game().get("profile")
+	var run: DDRun = _game().get("run")
+	var before: String = _state(run)
+	var co: Control = m.get("_callout")
+	# the banner ends on its own just before the player's tap
+	m.call("dismiss_banner")
+	m.call("_on_concept_timer")
+	check(not co.call("is_open"), "no callout right after the banner closes")
+	check(int(m.call("concept_grace_left")) > 300, "it waits out the grace (%d ms left)" % int(m.call("concept_grace_left")))
+	# the tap meant for the banner lands on an empty corner: its release starts the grace again
+	var xf: Transform2D = m.get_viewport().get_final_transform()
+	await tree.create_timer(0.4).timeout
+	for pressed: bool in [true, false]:
+		var mb: InputEventMouseButton = InputEventMouseButton.new()
+		mb.button_index = MOUSE_BUTTON_LEFT
+		mb.pressed = pressed
+		mb.position = xf * Vector2(6, 6)
+		mb.global_position = mb.position
+		Input.parse_input_event(mb)
+		await tree.process_frame
+	m.call("_on_concept_timer")
+	check(not co.call("is_open"), "still none: a finger just lifted")
+	check(int(m.call("concept_grace_left")) > 450, "the release restarted the grace")
+	eq(_state(run), before, "the stray tap changed nothing")
+	# the concept timer itself waits the grace out, then explains the street
+	await tree.create_timer(0.75).timeout
+	await _settle()
+	eq(str(m.get("hint_id")), "street", "after the grace, the first callout is the street")
+	check(co.call("is_open"), "(open)")
+	# a second tap aimed at the banner, right as the callout opens: eaten, not a dismiss
+	for pressed2: bool in [true, false]:
+		var mb2: InputEventMouseButton = InputEventMouseButton.new()
+		mb2.button_index = MOUSE_BUTTON_LEFT
+		mb2.pressed = pressed2
+		mb2.position = xf * Vector2(6, 6)
+		mb2.global_position = mb2.position
+		Input.parse_input_event(mb2)
+		await tree.process_frame
+	check(co.call("is_open") and not prof.concept_seen("street"), "a tap in the grace window doesn't dismiss it or mark it seen")
+	# Enter in the grace window doesn't either
+	var key: InputEventAction = InputEventAction.new()
+	key.action = "ui_accept"
+	key.pressed = true
+	Input.parse_input_event(key)
+	await tree.process_frame
+	check(co.call("is_open") and not prof.concept_seen("street"), "nor a key")
+	await _click(m, Vector2(6, 6))
+	check(not co.call("is_open") and prof.concept_seen("street"), "a tap once it has been read dismisses it")
+	eq(_state(run), before, "the run is untouched")
+	await _done(m)
+
+
+## Head: "1 per action": one callout, then the rest wait for the player's next game action.
+func test_one_callout_per_action() -> void:
+	tree.root.size = Vector2i(844, 390)
+	var m: Control = _main()
+	await _settle()
+	m.call("apply_debug", {"screen": "street", "seed": "11", "hints": "1"})
+	m.call("_render")
+	await _settle()
+	m.call("dismiss_banner")
+	eq(str(m.call("show_due_concept")), "street", "one concept")
+	m.call("dismiss_hint")
+	await _settle()
+	eq(str(m.call("show_due_concept")), "", "then nothing until the player acts")
+	m.call("_on_concept_timer")
+	await _settle()
+	check(not (m.get("_callout") as Control).call("is_open"), "(the timer doesn't open one either)")
+	# the player's action: picks melee
+	m.call("tap_weapon", DDRun.MELEE)
+	await _settle()
+	var id2: String = m.call("show_due_concept")
+	check(id2 != "" and id2 != "street", "after the action, the next one (%s)" % id2)
+	m.call("dismiss_hint")
+	await _settle()
+	eq(str(m.call("show_due_concept")), "", "and again only one")
+	await _done(m)
+
+
+## Head: "hide it until explained": the gun tile's challenge line shows once the Challenges concept
+## has been explained (it fades in as that callout opens), and always with Tips off.
+func test_challenge_line_hidden_until_explained() -> void:
+	tree.root.size = Vector2i(390, 844)
+	var m: Control = _main()
+	await _settle()
+	var prof: DDProfile = _game().get("profile")
+	m.call("apply_debug", {"screen": "street", "seed": "6", "gun1": "rifle", "stack1": "8,6", "hints": "1"})
+	m.call("_render")
+	await _settle()
+	m.call("dismiss_banner")
+	var gv: DDGunView = (m.get("_gun_views") as Array)[0]
+	check(gv != null and gv.chal_line != null, "the Rifle tile has a challenge line")
+	check(gv.chal_line.modulate.a < 0.01 and gv.chal_line.mouse_filter == Control.MOUSE_FILTER_IGNORE, "hidden before the Challenges concept")
+	var r0: Rect2 = gv.chal_line.get_global_rect()
+	var ids: Array = (m.call("concept_candidates") as Array).map(func(c: Array) -> String: return str(c[0]))
+	check(ids.has("challenge"), "the Challenges concept is due on a gun with kills (%s)" % str(ids))
+	# explain everything before it (1 per action), until Challenges comes
+	var guard: int = 0
+	while str(m.call("show_due_concept")) != "challenge" and guard < 20:
+		guard += 1
+		m.call("dismiss_hint")
+		m.call("player_acted")
+	eq(str(m.get("hint_id")), "challenge", "the Challenges concept is explained")
+	await tree.create_timer(0.5).timeout
+	check(gv.chal_line.modulate.a > 0.99, "the line appears as it is explained")
+	m.call("dismiss_hint")
+	await _settle()
+	check(prof.concept_seen("challenge"), "seen")
+	m.call("_render")
+	await _settle()
+	gv = (m.get("_gun_views") as Array)[0]
+	check(gv.chal_line.modulate.a > 0.99 and gv.chal_line.mouse_filter == Control.MOUSE_FILTER_STOP, "and stays shown")
+	eq(gv.chal_line.get_global_rect(), r0, "the line keeps its place (nothing in the tile moved)")
+	# Reset tips hides it again; Tips off always shows it
+	prof.reset_concepts()
+	m.call("_render")
+	await _settle()
+	gv = (m.get("_gun_views") as Array)[0]
+	check(gv.chal_line.modulate.a < 0.01, "Reset tips: hidden again until explained")
+	_game().call("set_setting", "tips", false)
+	await _settle()
+	check(gv.chal_line.modulate.a > 0.99, "Tips off: the line always shows")
+	_game().call("set_setting", "tips", true)
 	await _done(m)
 
 

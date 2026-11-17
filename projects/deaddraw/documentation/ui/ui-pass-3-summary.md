@@ -107,3 +107,41 @@ next-kill box, the Full set plate and the challenge line, and every tap target a
    off is one tap in Settings.)
 3. **Gun tile challenge line**: it still shows from the first street (goal and reward). Should it stay
    hidden until the "Challenges" concept has been explained, to keep the first streets even quieter?
+
+## Follow-up: the studio head's answers (and one bug)
+1. **Pace: 1 per action.** `DDConcepts.PER_MOMENT` is 1. One callout opens; the next waits for the
+   player's next game action (an attack, a card, Run, a room, a machine, picking a weapon, a sheet or
+   screen change: `main.gd player_acted()`). Inspect, the Guide and Settings don't count as actions.
+2. **Existing players: every tip marked seen, once.** A profile saved before the concept system (no
+   `tips_migrated` key) that has played (a run ended, a district cleared or a win) gets every concept
+   marked seen on load. The flag is then set and saved, so concepts added later still show to that
+   player. Fresh profiles, and old ones that never played, see every tip. **Reset tips** in Settings
+   (the note under it now says "Reset tips: every tip shows again, from the start.") clears the list.
+   The flag stays set, so a reload doesn't mark the tips seen again. Both are saved through the
+   crash-safe profile mirror and tested with the file deleted.
+3. **Challenge line hidden until explained.** The gun tile's challenge line (goal and reward) is
+   invisible but keeps its place, so nothing in the tile moves, and the gun takes its taps and
+   inspects. It fades in when the "Challenges" callout opens, with the gold ring on it. With Tips OFF
+   (or in the `?qa=1` smoke screens) it always shows. That concept is due on a gun's first kill, or
+   from the second street for a gun not used yet, so no player misses challenges. In the played smoke
+   it comes as the 6th street tip.
+4. **Bug: a tap aimed at the WAVE banner dismissed "The street" unread.** A callout now opens only
+   600 ms after the last banner or overlay closed **and** after the last finger or button release
+   (`CONCEPT_GRACE_MS`, `concept_grace_left()`). A tap, Enter or Esc in a callout's first 600 ms
+   (`GUARD_MS`) is eaten and doesn't dismiss it or mark it seen.
+
+Tests: 206 unit tests pass (4 new). `test_concepts.gd` has a test where the banner closes, a stray tap
+lands, then the callout waits out the grace, and a tap and a key inside the guard leave it open and
+unseen. It also has a test for 1 per action (one callout, then nothing, even from the timer, until
+the player picks a weapon) and one where the challenge line is hidden, revealed in place, hidden again
+by Reset tips and always shown with Tips off. `test_profile_save.gd` checks the existing-player
+migration (once only, saved to the mirror, Reset tips survives a reload, fresh and never-played
+profiles still see tips).
+
+In the web smoke, after one callout no second one may open within 1.8 s without a game action. The
+first street callout must be "The street", open and unread, after a tap that lands just after the WAVE
+banner closes. "Pick a weapon" must come only after the player acts, and the challenge line must be
+hidden exactly until the Challenges concept. Played order (both viewports): inspect, district,
+street, active_weapon, damage, rule_any, gun_slots, challenge. `state.tip_wait` reports why no callout
+is open (callouts since the last action, grace left, free). Results: errors: none on landscape and
+portrait. `crash_reload_web.js` passes.

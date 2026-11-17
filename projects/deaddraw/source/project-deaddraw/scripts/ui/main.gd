@@ -88,9 +88,15 @@ var hint_id: String = ""
 var hints_enabled: bool = true
 var _callout: Control = null
 var _concept_timer: Timer = null
-## callouts shown since the player last acted (DDConcepts.PER_MOMENT at most)
+## callouts shown since the player last acted (DDConcepts.PER_MOMENT at most: 1 per action)
 var _moment_shown: int = 0
 var _moment_screen: int = -1
+var _moment_sheet: String = ""
+## ui-pass-3 follow-up: a callout opens only CONCEPT_GRACE_MS after the last banner / overlay closed
+## and after the last finger or button release (a tap aimed at a banner that closes just before it
+## lands must not dismiss the callout unread). _quiet_ms is when that last happened.
+const CONCEPT_GRACE_MS: int = 600
+var _quiet_ms: int = -100000
 var _title_card: Control = null
 var _map_card: Control = null
 var _map_surv: Control = null
@@ -183,7 +189,7 @@ func _ready() -> void:
 	_concept_timer = Timer.new()
 	_concept_timer.one_shot = true
 	add_child(_concept_timer)
-	_concept_timer.timeout.connect(show_due_concept)
+	_concept_timer.timeout.connect(_on_concept_timer)
 	codex = Codex.new()
 	codex.name = "Codex"
 	add_child(codex)
@@ -209,11 +215,20 @@ func _ready() -> void:
 			if not bool(_v) and _callout.call("is_open"):
 				_callout.call("close_now")
 				hint_id = ""
+			_apply_challenge_lines()
 			_schedule_concepts())
 	# ui-pass-3: Reset tips or Tips on while a screen is up: look again once the Settings close
-	settings_panel.closed.connect(func() -> void: _schedule_concepts())
-	_inspect.closed.connect(func() -> void: _schedule_concepts())
-	codex.closed.connect(func() -> void: _schedule_concepts())
+	# (follow-up: and a callout waits CONCEPT_GRACE_MS after any overlay closes)
+	settings_panel.closed.connect(func() -> void:
+		_note_quiet()
+		_apply_challenge_lines()
+		_schedule_concepts())
+	_inspect.closed.connect(func() -> void:
+		_note_quiet()
+		_schedule_concepts())
+	codex.closed.connect(func() -> void:
+		_note_quiet()
+		_schedule_concepts())
 	if OS.has_feature("web"):
 		_inspect.opened.connect(_publish_state)
 		_inspect.closed.connect(_publish_state)
@@ -306,8 +321,11 @@ func _render() -> void:
 		# the screen is rebuilt: the anchor goes; the concept comes back (unmarked) on the new screen
 		_callout.call("close_now")
 		hint_id = ""
-	if int(screen) != _moment_screen:
+	# a new screen or a sheet opened / closed is the player's action: the next concept may come
+	var sheet_key: String = str(sheet.get("type", ""))
+	if int(screen) != _moment_screen or sheet_key != _moment_sheet:
 		_moment_screen = int(screen)
+		_moment_sheet = sheet_key
 		_moment_shown = 0
 	_title_card = null
 	_map_card = null
@@ -372,6 +390,7 @@ func _render() -> void:
 		var p: Dictionary = _auto_inspect
 		_auto_inspect = {}
 		_inspect.open.call_deferred(p)
+	_apply_challenge_lines()
 	_schedule_concepts()
 	if OS.has_feature("web"):
 		_publish_state.call_deferred()
@@ -1893,9 +1912,69 @@ func show_due_concept() -> String:
 	# a press that started before the callout can't turn into a tap on a card
 	DDCardView.cancel_presses()
 	_callout.call("open", id, DDConcepts.title(id, Game.bal), DDConcepts.text(id, Game.bal), r, DDConcepts.icon(id))
+	if id == "challenge":
+		_apply_challenge_lines(true)
 	if OS.has_feature("web"):
 		_publish_state.call_deferred()
 	return id
+
+
+## ui-pass-3 follow-up (head: "1 per action"): the player made a game action (an attack, a card, Run,
+## a room, a machine, a weapon picked, a sheet or screen changed): one more concept may be explained.
+func player_acted() -> void:
+	_moment_shown = 0
+
+
+## The concept timer: waits out the grace after a banner / overlay closed or a finger lifted, then
+## explains the next concept.
+func _on_concept_timer() -> void:
+	var left: int = concept_grace_left()
+	if left > 0:
+		if _concept_timer.is_inside_tree():
+			_concept_timer.start(float(left) / 1000.0 + 0.02)
+		return
+	show_due_concept()
+
+
+## Milliseconds before a callout may open (0 = now): CONCEPT_GRACE_MS after the last banner /
+## overlay closed or the last pointer release.
+func concept_grace_left() -> int:
+	return maxi(0, _quiet_ms + CONCEPT_GRACE_MS - Time.get_ticks_msec())
+
+
+func _note_quiet() -> void:
+	_quiet_ms = Time.get_ticks_msec()
+
+
+## Every pointer release starts the grace (seen before the GUI; nothing is consumed here).
+func _input(event: InputEvent) -> void:
+	if (event is InputEventMouseButton or event is InputEventScreenTouch) and not event.is_pressed():
+		_note_quiet()
+
+
+## ui-pass-3 follow-up (head: "hide it until explained"): the gun tiles' challenge line (goal and
+## reward) shows once the Challenges concept has been explained, or always with Tips off. Hidden,
+## it keeps its place (nothing in the tile moves) and the gun under it takes the taps and inspects.
+func challenge_line_shown() -> bool:
+	if not hints_enabled or Game.profile == null or not Game.profile.tips_on():
+		return true
+	return Game.profile.concept_seen("challenge") or hint_id == "challenge"
+
+
+func _apply_challenge_lines(fade: bool = false) -> void:
+	var show: bool = challenge_line_shown()
+	for gv: Variant in _gun_views:
+		if gv == null or not is_instance_valid(gv) or (gv as DDGunView).chal_line == null:
+			continue
+		var cl: Control = (gv as DDGunView).chal_line
+		if not is_instance_valid(cl):
+			continue
+		cl.set_meta(&"hidden_until_explained", not show)
+		cl.mouse_filter = Control.MOUSE_FILTER_STOP if show else Control.MOUSE_FILTER_IGNORE
+		if show and fade and cl.modulate.a < 1.0 and not Game.reduce_motion():
+			cl.create_tween().tween_property(cl, "modulate:a", 1.0, 0.35)
+		else:
+			cl.modulate.a = 1.0 if show else 0.0
 
 
 func _on_concept_dismissed(id: String) -> void:
@@ -2004,7 +2083,11 @@ func _street_concepts(run: DDRun, out: Array) -> void:
 			continue
 		if not g.stack.is_empty():
 			out.append(["gun_slots", gv])
-			out.append(["challenge", gv.chal_line if gv.chal_line != null else gv])
+		# ui-pass-3 follow-up: the challenge line stays hidden until this is explained, so it comes
+		# with the gun's first kill (or from the second street on, for a gun not used yet); the ring
+		# marks the line, which fades in as the callout opens
+		if gv.chal_line != null and (not g.stack.is_empty() or streets >= 1):
+			out.append(["challenge", gv.chal_line])
 		if g.kills_left() == 1:
 			out.append(["fill_gun", gv])
 		if str(run.bal.weapon_reward(g.wid)[0]) == "encore":
@@ -2577,6 +2660,8 @@ func tap_weapon(w: int) -> void:
 		return
 	if run.active != w:
 		run.set_active(w)
+		# ui-pass-3 follow-up: picking a weapon is the player's action: the next concept may come
+		player_acted()
 		Sfx.cue(&"equip", 1.2)
 		Game.save_run()
 	last_block = ""
@@ -3012,8 +3097,8 @@ func _finish(ev: Dictionary, fx: Dictionary) -> void:
 
 func _after_event(ev: Dictionary) -> void:
 	var run: DDRun = Game.run
-	# ui-pass-3: the player acted: the next concepts may be explained
-	_moment_shown = 0
+	# ui-pass-3: the player acted: the next concept may be explained (1 per action)
+	player_acted()
 	var waves: Array = ev.get("waves", [])
 	if not waves.is_empty():
 		var info: Dictionary = waves[waves.size() - 1]
@@ -3071,6 +3156,9 @@ func dismiss_banner() -> void:
 	_banner_tween = null
 	if _banner_layer != null and is_instance_valid(_banner_layer):
 		_banner_layer.queue_free()
+	if _banner_layer != null or _banner != null:
+		# ui-pass-3 follow-up: a tap aimed at the banner may land just after it closes
+		_note_quiet()
 	_banner_layer = null
 	_banner = null
 	_schedule_concepts(0.3)
@@ -3804,6 +3892,10 @@ func _publish_state() -> void:
 		"banner_rect": _css_rect(_banner, xf, dpr) if banner_open() else {}, "saved": Game.has_saved_run(), "hint": hint_id,
 		"callout": _css_rect(_callout.get("bubble"), xf, dpr) if _callout.call("is_open") and _callout.get("bubble") != null else {},
 		"seen": Game.profile.data.get("concepts_seen", []) if Game.profile != null else [],
+		"chal_line": challenge_line_shown(),
+		# why no callout is open now (smoke diagnostics): callouts since the last action, grace left, free
+		"tip_wait": {"moment": _moment_shown, "grace": concept_grace_left(), "free": concepts_can_show(),
+			"timer": snappedf(_concept_timer.time_left, 0.01) if _concept_timer != null else -1.0},
 		"sheet": str(sheet.get("type", "")) if Game.run == null or Game.run.pending_patch.is_empty() else "patch", "block": last_block,
 		"overlay": str(codex.get("mode")) if codex.is_open() else "", "tip": _inspect.last_lines if _inspect.is_open() else [],
 		"vw": get_viewport_rect().size.x, "vh": get_viewport_rect().size.y}

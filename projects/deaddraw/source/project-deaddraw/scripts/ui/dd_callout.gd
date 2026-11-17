@@ -19,8 +19,10 @@ const RING: Color = Color("f0c040")
 const DIM: Color = Color(0, 0, 0, 0.42)
 const GAP: float = 14.0
 const PAD: float = 8.0
-## Taps that start this soon after the callout opens don't dismiss it (they were aimed at the game).
-const GUARD_MS: int = 350
+## Taps that start this soon after the callout opens don't dismiss it (they were aimed at the game:
+## a card, a banner that just closed). ui-pass-3 follow-up: 600 ms, the same grace main.gd keeps
+## after a banner / overlay closes or a finger lifts before it opens one.
+const GUARD_MS: int = 600
 
 var concept: String = ""
 var anchor_rect: Rect2 = Rect2()
@@ -158,7 +160,7 @@ func _gui_input(event: InputEvent) -> void:
 		if mb.pressed:
 			# a tap in the first moment was meant for what was there before (a banner, a card): it is
 			# eaten, and the callout stays to be read
-			_press_seen = Time.get_ticks_msec() - _opened_ms >= GUARD_MS
+			_press_seen = not in_guard()
 		elif _press_seen:
 			dismiss()
 	elif event is InputEventScreenTouch or event is InputEventMouseMotion:
@@ -167,8 +169,17 @@ func _gui_input(event: InputEvent) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if is_open() and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("ui_accept")):
+		if in_guard():
+			# a key pressed for the screen before: eaten, the callout stays to be read
+			get_viewport().set_input_as_handled()
+			return
 		dismiss()
 		get_viewport().set_input_as_handled()
+
+
+## True in the callout's first GUARD_MS: a tap or key then doesn't dismiss it.
+func in_guard() -> bool:
+	return Time.get_ticks_msec() - _opened_ms < GUARD_MS
 
 
 ## Got it / a tap: closes and tells main.gd which concept was read. Never touches the run.

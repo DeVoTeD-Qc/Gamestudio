@@ -12,6 +12,10 @@
 #   ui-pass-3: data.concepts_seen lists the concepts already explained (DDConcepts: each one once,
 #   the first time it is on screen); setting "tips" turns the explanations off; reset_concepts()
 #   ("Reset tips") clears the list. This replaced the first-run hints (data.hints_seen is kept, unused).
+#   ui-pass-3 follow-up (head: "mark all seen for existing players"): data.tips_migrated. A profile
+#   saved before the concept system (no tips_migrated key) that has played (a run ended, a district
+#   cleared or a win) gets every concept marked seen once, on load; then the flag is set, so concepts
+#   added later still show to that player. Fresh profiles start with the flag set and see every tip.
 #   dd-ux-v4: data.codex_met lists the Codex entries the player has met (an additive key: older
 #   saves load with it empty; the save version is unchanged).
 #   v3 (save version 3): v3 "Kill Stacks" scores aren't comparable with v2's, so a version-2 save
@@ -22,7 +26,7 @@
 #   dd-ios-save: like the run save, the profile is also written to a synchronous mirror (localStorage +
 #   sessionStorage on the Web, see DDRunSave.WebStorage) with a saved_at stamp; loading takes the newest
 #   copy that parses, so unlocks and settings survive a tab that is killed before IndexedDB syncs.
-# Dependencies: DDBalance, DDRunSave (its WebStorage mirror).
+# Dependencies: DDBalance, DDRunSave (its WebStorage mirror), DDConcepts (the tips migration).
 # Author: Mechanics Developer Agent
 class_name DDProfile
 extends RefCounted
@@ -51,7 +55,7 @@ func _init(balance: DDBalance = null, save_path: String = DEFAULT_PATH, save_mir
 
 func reset() -> void:
 	data = {"version": VERSION, "cleared": [], "unlocked_perks": [], "unlocked_survivors": [],
-		"best": {}, "best_v1": {}, "best_v2": {}, "badges": {}, "runs": 0, "wins": 0, "hints_seen": [], "concepts_seen": [], "codex_met": [], "settings": SETTING_DEFAULTS.duplicate()}
+		"best": {}, "best_v1": {}, "best_v2": {}, "badges": {}, "runs": 0, "wins": 0, "hints_seen": [], "concepts_seen": [], "tips_migrated": true, "codex_met": [], "settings": SETTING_DEFAULTS.duplicate()}
 
 
 func load_profile() -> bool:
@@ -93,7 +97,25 @@ func load_profile() -> bool:
 		for k: String in SETTING_DEFAULTS:
 			if (saved as Dictionary).has(k):
 				_put_setting(k, saved[k])
+	if not (parsed as Dictionary).has("tips_migrated"):
+		_migrate_tips()
 	return true
+
+
+## ui-pass-3 follow-up: a profile from before the concept system. If that player has played, every
+## concept counts as explained (they know the game); either way the flag is set and saved, once.
+func _migrate_tips() -> void:
+	data["tips_migrated"] = true
+	if has_played():
+		for id: String in DDConcepts.ids():
+			if not (data["concepts_seen"] as Array).has(id):
+				(data["concepts_seen"] as Array).append(id)
+	save()
+
+
+## True once the player has any progress: a run ended, a district cleared or a run won.
+func has_played() -> bool:
+	return int(data.get("runs", 0)) > 0 or int(data.get("wins", 0)) > 0 or not (data["cleared"] as Array).is_empty()
 
 
 # ---------------------------------------------------------------- settings (dd-feel)
@@ -233,8 +255,10 @@ func mark_concept(id: String) -> void:
 		save()
 
 
-## "Reset tips": every concept is explained again the next time it shows up.
+## "Reset tips": every concept is explained again the next time it shows up, as for a new player
+## (the migration flag stays set, so a reload doesn't mark them seen again).
 func reset_concepts() -> void:
+	data["tips_migrated"] = true
 	data["concepts_seen"] = []
 	data["hints_seen"] = []
 	save()

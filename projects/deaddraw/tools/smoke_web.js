@@ -94,14 +94,24 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
     const cdp = await ctx.newCDPSession(page);
     const log = (m) => console.log(`[${vp.name}] ${m}`);
     const closeInspect = async () => { await touchTap(cdp, { x: vp.width / 2, y: 8 }); return waitFor(page, (x) => !x.inspect, 'inspect closed'); };
-    // ui-pass-3: waits for the callouts due now (each concept once), checks each, dismisses it with Got it
+    // ui-pass-3: waits for the callout due now (each concept once), checks it, dismisses it with Got it
+    // (or a tap on an empty corner). Follow-up (head: "1 per action"): after one callout no other may
+    // open until the player's next game action; and the gun tile's challenge line shows only once the
+    // Challenges concept is explained (state.chal_line).
     const seenTips = [];
+    let tipTap = 0;
+    const chalCheck = (s, where) => {
+      if (s.screen === 'STREET' && s.chal_line !== ((s.seen || []).includes('challenge') || s.hint === 'challenge'))
+        errors.push(`challenge line ${s.chal_line ? 'shown before' : 'hidden after'} the Challenges concept (${where})`);
+    };
     const tips = async (where, waitMs = 1400) => {
       const ids = [];
-      for (let k = 0; k < 10; k++) {
+      for (let k = 0; k < 2; k++) {
         const t0 = Date.now(); let s = await state(page);
         while (!s.hint && Date.now() - t0 < waitMs) { await sleep(150); s = await state(page); }
+        chalCheck(s, where);
         if (!s.hint) break;
+        if (k > 0) { errors.push(`a second callout (${s.hint}) opened without a game action (${where}, after ${ids.join(',')})`); break; }
         const id = s.hint; const g0 = gameOf(s);
         if (seenTips.includes(id)) errors.push(`callout ${id} came back (${where})`);
         const c = s.callout || {};
@@ -109,13 +119,14 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
         if (ids.length === 0 && shotTips) { await sleep(250); await shot('tip_' + where + '_' + id); }
         const ok = s.items.find((i) => i.type === 'button' && i.name === 'HintOk');
         if (!ok) { errors.push('callout without Got it: ' + id); break; }
-        await sleep(450); // a tap in the callout's first 350 ms is eaten without dismissing it
+        await sleep(700); // a tap in the callout's first 600 ms is eaten without dismissing it
         // alternate: Got it, then a tap on an empty corner (both only dismiss)
-        await touchTap(cdp, k % 2 === 0 ? center(ok) : { x: 6, y: vp.height - 6 });
+        await touchTap(cdp, tipTap++ % 2 === 0 ? center(ok) : { x: 6, y: vp.height - 6 });
         s = await waitFor(page, (x) => x.hint !== id, 'callout ' + id + ' dismissed', 4000);
         if (gameOf(s) !== g0) errors.push(`dismissing ${id} changed the game: ${g0} -> ${gameOf(s)}`);
         ids.push(id); seenTips.push(id);
-        waitMs = 900;
+        chalCheck(s, where);
+        waitMs = 1800; // long enough for a (wrong) second callout: grace 600 ms + the 0.25 s look
       }
       if (ids.length) log(`tips (${where}): ${ids.join(', ')}`);
       return ids;
@@ -150,26 +161,39 @@ const btn = (name) => (i) => i.type === 'button' && i.name === name;
       s = await waitFor(page, (x) => x.screen === 'STREET', 'street');
       log(`street hp=${s.hp} wave=${s.wave} pile=${s.pile} pts=${s.points} hint=${s.hint}`);
       await sleep(250); await shot('03_street_enter_shuffle');
-      s = await waitFor(page, (x) => x.banner_open, 'WAVE 1 banner'); await sleep(500); await shot('03b_wave1_banner');
+      // (the WAVE banner itself is shot on the wave2_banner screen below: here the tap comes at once)
+      s = await waitFor(page, (x) => x.banner_open, 'WAVE 1 banner');
       if (s.banner !== 'WAVE 1') errors.push('first banner is not WAVE 1: ' + s.banner);
-      // skip it with a tap on the empty top margin (if it already ended, that tap does nothing)
-      await touchTap(cdp, { x: vp.width / 2, y: 4 });
-      s = await waitFor(page, (x) => !x.banner_open, 'a tap skips the banner', 3000);
+      // skip it with a tap on the empty top margin (unless it already ended during the screenshot)
+      s = await state(page);
+      if (s.banner_open && !s.hint) {
+        await touchTap(cdp, { x: vp.width / 2, y: 4 });
+        s = await waitFor(page, (x) => !x.banner_open, 'a tap skips the banner', 3000);
+        // follow-up bug: a second tap aimed at the banner lands just after it closed. It must not
+        // dismiss the first callout unread (the callout opens 600 ms after the banner closed and the
+        // last finger lifted, and a tap in its first 600 ms doesn't count)
+        await touchTap(cdp, { x: vp.width / 2, y: 4 });
+        log('late tap after the banner closed');
+      } else log('the banner ended before the tap');
       s = await waitFor(page, (x) => !!x.hint, 'the first street concept', 4000); await sleep(300); await shot('04_street_first_concept');
       checkOff(s, 'street');
-      // (the tap that skips the WAVE banner may land on the first callout: it only dismisses it)
-      if (s.hint !== 'street' && !(s.seen || []).includes('street')) errors.push('first street concept is not the street: ' + s.hint);
+      // follow-up fix: the tap that skips the WAVE banner can't dismiss the first callout unread (a
+      // callout opens 600 ms after the banner closes and the last finger lifts, and eats taps in its
+      // first 600 ms): the first street callout is always the street, open, not yet seen
+      if (s.hint !== 'street' || (s.seen || []).includes('street')) errors.push('first street callout is not the street, still unread: ' + s.hint + ' seen=' + JSON.stringify(s.seen));
       await tips('street');
       s = await state(page);
-      for (const id of ['street', 'active_weapon']) if (!(s.seen || []).includes(id)) errors.push('street: concept not explained: ' + id + ' seen=' + JSON.stringify(s.seen));
+      if (!(s.seen || []).includes('street')) errors.push('street: concept not explained: street seen=' + JSON.stringify(s.seen));
+      if ((s.seen || []).includes('active_weapon')) errors.push('street: a second concept was explained before the player acted');
       s = await state(page); await shot('05_street_after_concepts');
       // active weapon: melee then the pistol
       await touchTap(cdp, center(find(s, card(202), 'melee tile')));
       s = await waitFor(page, (x) => x.active === 2, 'melee active'); await shot('06_melee_active');
-      await tips('melee', 1100); s = await state(page);
+      await tips('melee', 1800); s = await state(page);
+      if (!(s.seen || []).includes('active_weapon')) errors.push('the player acted: pick a weapon was not explained next, seen=' + JSON.stringify(s.seen));
       await touchTap(cdp, center(find(s, card(200), 'gun 1')));
       s = await waitFor(page, (x) => x.active === 0, 'pistol active');
-      await tips('pistol', 1100); s = await state(page);
+      await tips('pistol', 1800); s = await state(page);
       // attack a zombie with the pistol: it lands on the stack
       const z = s.items.find((i) => i.type === 'card' && (i.kind === 'Z' || i.kind === 'F') && i.index >= 0 && i.index < 100);
       if (z) {

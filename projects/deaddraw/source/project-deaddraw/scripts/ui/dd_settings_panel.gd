@@ -71,13 +71,17 @@ func open() -> void:
 	var rt: Button = DDUi.button("Reset tips", DDUi.PANEL_HI, DDUi.FONT_M)
 	rt.name = "ResetTips"
 	rt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rt.tooltip_text = "Every tip shows again from the start, as for a new player."
 	rt.pressed.connect(func() -> void:
 		g.profile.reset_concepts()
-		rt.text = "Tips reset: you'll see them again"
+		rt.text = "All tips will show again" if g.profile.tips_on() else "Reset: turn Tips ON to see them"
 		rt.disabled = true
 		Sfx.cue(&"flip"))
 	grid.add_child(rt)
-	v.add_child(DDUi.label("Reduce motion: cards fade instead of flying, no shake or zoom.", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true))
+	# ui-pass-3 follow-up: say plainly what Reset tips does (the seen tips are saved in the profile)
+	var rtl: Label = DDUi.label("Reduce motion: cards fade instead of flying, no shake or zoom. Reset tips: every tip shows again, from the start.", DDUi.FONT_S, DDUi.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER, true)
+	rtl.name = "SettingsNote"
+	v.add_child(rtl)
 	v.add_child(_skin_row(g))
 	var more: HBoxContainer = DDUi.hbox(8)
 	v.add_child(more)

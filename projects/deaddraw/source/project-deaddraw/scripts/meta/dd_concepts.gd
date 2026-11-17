@@ -13,8 +13,9 @@ class_name DDConcepts
 extends RefCounted
 
 const PATH: String = "res://data/concepts.json"
-## At most this many callouts in a row before the player acts again (the rest wait their turn).
-const PER_MOMENT: int = 3
+## At most this many callouts before the player's next game action (the rest wait their turn).
+## Head (ui-pass-3 follow-up): "1 per action".
+const PER_MOMENT: int = 1
 
 ## The parsed registry (one small JSON file, loaded once).
 static var _reg: Dictionary = {}

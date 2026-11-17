@@ -57,6 +57,56 @@ func test_concepts_seen_once_and_reset() -> void:
 	_cleanup()
 
 
+## ui-pass-3 follow-up (head: "mark all seen for existing players"): a profile saved before the
+## concept system that has played gets every concept marked seen once, on load; a fresh one (and
+## an old one that never played) sees every tip; Reset tips brings them back for good (the flag
+## stays set, through the crash-safe mirror).
+func test_existing_players_start_with_every_tip_seen_once() -> void:
+	var m: DDRunSave.MemoryMirror = DDRunSave.MemoryMirror.new()
+	var p: String = "user://dd_test_profile_mig_%d.json" % Time.get_ticks_usec()
+	_paths.append(p)
+	var old: Dictionary = {"version": 3, "cleared": ["maple_row"], "unlocked_perks": [], "unlocked_survivors": [], "best": {"rosa": 40},
+		"badges": {}, "runs": 2, "wins": 0, "hints_seen": ["street"], "concepts_seen": [], "codex_met": [], "settings": {"tips": true}}
+	var f: FileAccess = FileAccess.open(p, FileAccess.WRITE)
+	f.store_string(JSON.stringify(old))
+	f.close()
+	var pr: DDProfile = DDProfile.new(bal(), p, m)
+	check(pr.load_profile(), "the old profile loads")
+	check(DDConcepts.ids().all(func(id: String) -> bool: return pr.concept_seen(id)), "an existing player: every concept is marked seen")
+	check(bool(pr.data.get("tips_migrated", false)), "once (the flag is set)")
+	eq(DDConcepts.pick(["street", "damage"], pr), -1, "no tips for the existing player")
+	check(pr.tips_on(), "Tips stays on (later concepts still show)")
+	# saved: the mirror alone keeps it (crash before the file syncs)
+	DirAccess.remove_absolute(p)
+	var back: DDProfile = DDProfile.new(bal(), p, m)
+	check(back.load_profile() and back.concept_seen("street") and bool(back.data.get("tips_migrated", false)), "the migration is saved")
+	# a concept added after the migration is not marked (only the ones that existed)
+	(back.data["concepts_seen"] as Array).erase("damage")
+	back.save()
+	var back2: DDProfile = DDProfile.new(bal(), p, m)
+	check(back2.load_profile() and not back2.concept_seen("damage"), "the migration runs once: a later concept still shows")
+	# Reset tips: every tip again, from zero, and the reset survives a reload (file gone, mirror only)
+	back2.reset_concepts()
+	DirAccess.remove_absolute(p)
+	var back3: DDProfile = DDProfile.new(bal(), p, m)
+	check(back3.load_profile() and not back3.concept_seen("street") and DDConcepts.pick(["street"], back3) == 0, "Reset tips: every tip shows again after a reload")
+	# an old profile that never played and a fresh one: every tip shows
+	var p2: String = "user://dd_test_profile_mig2_%d.json" % Time.get_ticks_usec()
+	_paths.append(p2)
+	var fresh_old: Dictionary = old.duplicate(true)
+	fresh_old["runs"] = 0
+	fresh_old["cleared"] = []
+	fresh_old["best"] = {}
+	var f2: FileAccess = FileAccess.open(p2, FileAccess.WRITE)
+	f2.store_string(JSON.stringify(fresh_old))
+	f2.close()
+	var pr2: DDProfile = DDProfile.new(bal(), p2)
+	check(pr2.load_profile() and not pr2.concept_seen("street") and bool(pr2.data.get("tips_migrated", false)), "an old profile that never played sees the tips")
+	var pr3: DDProfile = DDProfile.new(bal(), "user://dd_test_profile_none_%d.json" % Time.get_ticks_usec())
+	check(not pr3.concept_seen("street") and bool(pr3.data.get("tips_migrated", false)), "a fresh profile sees the tips")
+	_cleanup()
+
+
 func test_downtown_unlocks_theo() -> void:
 	var pr: DDProfile = _prof()
 	var fresh: Array[String] = pr.record_district_clear("downtown")
