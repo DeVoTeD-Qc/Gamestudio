@@ -208,7 +208,7 @@ func withdraw() -> void:
 
 func load_consent() -> void:
 	var cfg: ConfigFile = ConfigFile.new()
-	if cfg.load(consent_path) != OK:
+	if SaveMirror.load_cfg(cfg, consent_path) != OK:  # kc-ios-save: file or localStorage mirror
 		return
 	if int(cfg.get_value("consent", "version", 0)) != CONSENT_VERSION:
 		return
@@ -227,7 +227,7 @@ func _save_consent() -> void:
 	cfg.set_value("consent", "given", enabled)
 	cfg.set_value("survey", "pre", pre_survey)
 	_ensure_dir(consent_path)
-	if cfg.save(consent_path) != OK:
+	if SaveMirror.save_cfg(cfg, consent_path) != OK:
 		push_warning("PlaytestLog: cannot save %s" % consent_path)
 
 

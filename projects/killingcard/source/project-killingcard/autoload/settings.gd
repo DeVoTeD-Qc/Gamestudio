@@ -208,17 +208,18 @@ func equipped_art(chassis: StringName) -> StringName:
 
 
 ## Writes PERSISTED_KEYS to a ConfigFile. Returns the Error code.
+## kc-ios-save: also mirrored to localStorage on the web (SaveMirror; the run profile lives here).
 func save_to(path: String) -> Error:
 	var cfg := ConfigFile.new()
 	for key: StringName in PERSISTED_KEYS:
 		cfg.set_value(SECTION, String(key), get(key))
-	return cfg.save(path)
+	return SaveMirror.save_cfg(cfg, path)
 
 
 ## Reads PERSISTED_KEYS from a ConfigFile (missing file or keys keep their values). True if read.
 func load_from(path: String) -> bool:
 	var cfg := ConfigFile.new()
-	if cfg.load(path) != OK:
+	if SaveMirror.load_cfg(cfg, path) != OK:
 		return false
 	for key: StringName in PERSISTED_KEYS:
 		var v: Variant = cfg.get_value(SECTION, String(key), get(key))

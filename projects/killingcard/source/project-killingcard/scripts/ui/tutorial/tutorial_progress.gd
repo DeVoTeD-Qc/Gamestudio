@@ -41,19 +41,20 @@ static func record(completed: bool, last_step: int) -> void:
 	else:
 		cfg.set_value(SECTION, "skipped", true)
 	cfg.set_value(SECTION, "last_step", last_step)
-	var err: Error = cfg.save(path)
+	# kc-ios-save: also mirrored to localStorage on the web (SaveMirror), so a crash-reload keeps it.
+	var err: Error = SaveMirror.save_cfg(cfg, path)
 	if err != OK:
 		push_warning("TutorialProgress: could not save %s (%s)" % [path, error_string(err)])
 
 
 ## Forgets the record (tests, a future "replay tutorial" option).
 static func reset() -> void:
+	SaveMirror.put_tombstone(path)
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(path)
 
 
 static func _load() -> ConfigFile:
 	var cfg: ConfigFile = ConfigFile.new()
-	if FileAccess.file_exists(path):
-		cfg.load(path)
+	SaveMirror.load_cfg(cfg, path)
 	return cfg

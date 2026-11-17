@@ -71,6 +71,48 @@ func _ready() -> void:
 	# tests start from a blank profile and call apply_demo_collection() themselves).
 	if DisplayServer.get_name() != "headless":
 		apply_demo_collection.call_deferred()
+		_hook_page_hide()
+
+
+# kc-ios-save: iOS kills a tab that uses too much memory and Safari reloads it; a closed or hidden
+# tab may never run another frame. The run already saves after every change (to the file and, on the
+# web, synchronously to localStorage via SaveMirror); on pagehide / the tab going hidden / focus out
+# everything is flushed once more (run with its play time, settings + profile).
+var _page_hide_cb: JavaScriptObject = null
+
+
+func _hook_page_hide() -> void:
+	if not OS.has_feature("web"):
+		return
+	_page_hide_cb = JavaScriptBridge.create_callback(_on_page_hide)
+	var win: JavaScriptObject = JavaScriptBridge.get_interface("window")
+	var doc: JavaScriptObject = JavaScriptBridge.get_interface("document")
+	if win != null:
+		win.addEventListener("pagehide", _page_hide_cb)
+	if doc != null:
+		doc.addEventListener("visibilitychange", _page_hide_cb)
+
+
+func _on_page_hide(args: Array) -> void:
+	var ev: JavaScriptObject = args[0] if not args.is_empty() and args[0] is JavaScriptObject else null
+	if ev != null and String(ev.type) == "visibilitychange" \
+			and String(JavaScriptBridge.eval("document.visibilityState", true)) != "hidden":
+		return
+	flush_saves()
+
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_WM_CLOSE_REQUEST]:
+		flush_saves()
+
+
+## Saves the run (when there is one) and the persisted settings / profile now.
+func flush_saves() -> void:
+	if autosave and run != null:
+		save_run()
+	var st: Node = get_node_or_null(^"/root/Settings")
+	if st != null and bool(st.get(&"persist")) and st.has_method(&"save_to"):
+		st.save_to(st.SAVE_PATH)
 
 
 ## kc-da-ui3 (head D2): merges the demo collection (DemoCollection.pick: every starter card plus a few
