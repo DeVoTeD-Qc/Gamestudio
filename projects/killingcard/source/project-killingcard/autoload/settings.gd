@@ -60,6 +60,10 @@ var tips_enabled: bool = true
 ## kc-ui4: the Operator (primary weapon id) picked on the starter screen; "" = the run's default.
 ## New runs and the quick match start with it.
 var operator_primary: String = ""
+## kc-feedback (head: "for a first playthrough, skip the operator selection and killstreak selection"):
+## true once the player's first run started with the beginner kit (RunState.quick_begin). From then on
+## START NEW RUN shows the Operator and killstreak screens. Saved (SaveMirror) like every option.
+var quick_start_done: bool = false
 ## kc-v2-impl: the between-runs profile (RunProfile: runs finished / won, bosses, unlocks, Dossier).
 var run_profile: Dictionary = {}
 ## kc-cards-impl: Settings > Cards > "Always show all card info": board cards always show their cost,
@@ -77,7 +81,7 @@ const SECTION: String = "options"
 const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"speed_chosen", &"fast_fights", &"fast_animations",
 		&"equipped_arts", &"operator_primary", &"found_arts", &"met_flags", &"seen_flags", &"tips_enabled",
 		&"show_all_card_info", &"master_volume", &"sfx_volume", &"screen_shake", &"reduced_motion", &"motion_chosen",
-		&"run_profile"]
+		&"run_profile", &"quick_start_done"]
 ## Save on set_value() (true once the startup load ran; off in headless tests).
 var persist: bool = false
 

@@ -371,7 +371,14 @@ func _on_start_pressed() -> void:
 
 func _start_new_run() -> void:
 	var rs: Node = RunFlow.run_state()
+	# kc-feedback (head: "for a first playthrough, skip the operator selection and killstreak selection
+	# screen"): the first run starts with the beginner kit, straight onto the run map. From the second
+	# run on, the Operator and killstreak screens come back (and explain themselves then).
+	var quick: bool = rs.first_playthrough()
 	rs.start_run()
+	if quick and rs.quick_begin() == "":
+		goto(RunFlow.SCENE_RUN_MAP)
+		return
 	goto(RunFlow.SCENE_LOADOUT)
 
 

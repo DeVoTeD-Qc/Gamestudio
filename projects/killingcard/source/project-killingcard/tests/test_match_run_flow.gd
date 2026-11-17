@@ -53,7 +53,11 @@ func _setup() -> void:
 	if &"run_map_enabled" in _rs:
 		_rs.set(&"run_map_enabled", false)
 	_saved = {"save_path": _rs.save_path, "autosave": _rs.autosave, "dry_run": _router.dry_run,
-			"plog_enabled": plog.enabled, "root_size": tree.root.size, "fast": _settings.fast_animations}
+			"plog_enabled": plog.enabled, "root_size": tree.root.size, "fast": _settings.fast_animations,
+			"quick": _settings.quick_start_done}
+	# kc-feedback: this suite drives the Operator / killstreak screens: a player past the first run
+	# (the first playthrough skips them: test_feedback_nov17.gd).
+	_settings.quick_start_done = true
 	plog.enabled = false
 	var dir: String = "user://test_match_run_flow/s%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -96,6 +100,7 @@ func _teardown() -> void:
 	_router.active_match = null
 	_router.last_match_report = {}
 	_settings.fast_animations = _saved["fast"]
+	_settings.quick_start_done = _saved["quick"]
 	tree.root.get_node("PlaytestLog").enabled = _saved["plog_enabled"]
 	tree.root.size = _saved["root_size"]
 
@@ -422,10 +427,7 @@ func _full_run_body() -> void:
 		await _tap(m.get_mulligan_panel().get_keep_button())
 	await _play_round(m, c)
 	var pause: Control = m.get_pause_menu()
-	# kc-recap-dismiss: while the round recap shows, the first tap (MENU too) only closes it.
-	if m.get_round_recap().is_open():
-		await _tap(m.get_menu_button())
-		assert_false(pause.is_open() or m.get_round_recap().is_open(), "that tap only closed the recap")
+	# kc-feedback: no round recap panel any more: the first tap on MENU opens it.
 	await _tap(m.get_menu_button())
 	assert_true(pause.is_open(), "MENU opens the pause sheet")
 	_check_overlay(pause, "pause sheet")

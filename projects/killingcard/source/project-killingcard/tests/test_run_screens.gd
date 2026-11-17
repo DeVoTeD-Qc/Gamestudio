@@ -51,7 +51,11 @@ func _setup() -> void:
 	if &"run_map_enabled" in _rs:
 		_rs.set(&"run_map_enabled", false)
 	_saved = {"save_path": _rs.save_path, "autosave": _rs.autosave, "dry_run": _router.dry_run,
-			"plog_enabled": plog.enabled, "config": _rs.config, "met": st.met_flags.duplicate(), "seen": st.seen_flags.duplicate()}
+			"plog_enabled": plog.enabled, "config": _rs.config, "met": st.met_flags.duplicate(), "seen": st.seen_flags.duplicate(),
+			"quick": st.quick_start_done}
+	# kc-feedback: this suite drives the Operator / killstreak screens (a player past the first run; the
+	# first playthrough's skip is test_feedback_nov17.gd).
+	st.quick_start_done = true
 	# kc-onboard-ui: the shipped config (Standard Issue starter, onboarding ladder) on a fresh profile
 	# (no system met yet), so the M1 drop hides Retire until it is met.
 	_rs.config = null
@@ -96,6 +100,7 @@ func _teardown() -> void:
 	var st: Node = tree.root.get_node("Settings")
 	st.met_flags = _saved["met"]
 	st.seen_flags = _saved["seen"]
+	st.quick_start_done = _saved["quick"]
 	tree.root.size = _saved_root_size
 
 

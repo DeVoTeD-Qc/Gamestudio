@@ -256,6 +256,38 @@ func set_primary(id: StringName) -> String:
 	return err
 
 
+## kc-feedback: true on the player's first playthrough: no run finished yet and the beginner kit not
+## used before (Settings.quick_start_done). START NEW RUN then skips the Operator and killstreak
+## screens (title.gd) and goes straight to the run map with quick_begin().
+func first_playthrough() -> bool:
+	var st: Node = get_node_or_null(^"/root/Settings")
+	if st != null and bool(st.get(&"quick_start_done")):
+		return false
+	return RunProfile.is_first_run(profile())
+
+
+## kc-feedback: begins the started run with the beginner kit: the run's default Operator (the
+## starter primary, Kestrel AR-7: no extra rules) and the starter killstreaks, then remembers it
+## (Settings.quick_start_done, saved through SaveMirror: a crash-reload keeps it). "" or the reason.
+func quick_begin() -> String:
+	if run == null:
+		return "no run"
+	if run.config.starter_primary != null and run.primary != run.config.starter_primary.id:
+		run.set_primary(run.config.starter_primary.id)
+	var picks: Array[StringName] = []
+	for ks: LoadoutItem in run.config.starter_killstreaks:
+		if ks != null:
+			picks.append(ks.id)
+	var err: String = set_killstreaks(picks)
+	if err == "":
+		err = begin_run()
+	if err == "":
+		var st: Node = get_node_or_null(^"/root/Settings")
+		if st != null:
+			st.call(&"set_value", &"quick_start_done", true)
+	return err
+
+
 func begin_run() -> String:
 	if run == null:
 		return "no run"
