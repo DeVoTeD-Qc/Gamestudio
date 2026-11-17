@@ -43,7 +43,7 @@ const CORE: Dictionary = {
 			"First Deploy (anchored to the Supply counter)."],
 	&"ready": ["READY", "When your plan is set, tap READY. Both sides' cards go off at the same time (nobody goes first), then the columns fight.",
 			"First Deploy, after a card is played (anchored to READY)."],
-	&"stats": ["Firepower and Armor", "The teal ring is the damage it deals per shot. The plate is its health: at 0 it is eliminated.",
+	&"stats": ["Firepower and Armor", "The ring is the damage it deals per shot: teal on your units, red on the rival's. The plate is its health: at 0 it is eliminated.",
 			"The first unit on the board."],
 	&"incoming": ["Incoming", "The rival played a card face down here. You see what it is when the round starts.",
 			"The first INCOMING marker."],
