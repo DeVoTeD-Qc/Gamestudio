@@ -60,6 +60,10 @@ func run_command(cmd: String) -> String:
 					{"reason": &"target", "rounds": 4, "player_score": 6 if cmd == "win" else 2, "enemy_score": 2 if cmd == "win" else 6},
 					{"best_streak": 2, "player_eliminations": 4, "enemy_eliminations": 2})
 			return ""
+		"tex_usage":
+			# kc-ios-mem: what the art caches hold (soak tests), to window.kcQaTex.
+			JavaScriptBridge.eval("window.kcQaTex = %s;" % JSON.stringify(tex_inventory()), true)
+			return ""
 		"stage_synergy":
 			var ctrl: Node = scene.get_node_or_null("%MatchController") if scene != null and scene.has_node("%MatchController") else null
 			if ctrl == null or ctrl.get(&"state") == null:
@@ -103,14 +107,65 @@ func run_command(cmd: String) -> String:
 	return "unknown command"
 
 
+## kc-ios-mem: the textures the static art caches hold (decoded RGBA size, MB) per cache and the
+## biggest entries. Shared textures count once per cache that holds them.
+static func tex_inventory() -> Dictionary:
+	var caches: Dictionary = {"CardArt.bitmaps": CardArt._bitmaps, "CardArt.svg": CardArt._cache,
+			"BannerArtDB.frames": BannerArtDB._frames, "UiKit.pieces": UiKit._pieces, "UiKit.tex": UiKit._tex,
+			"KitTheme.tex": KitTheme._tex, "IconText": IconText._tex_cache}
+	var arts: Dictionary = {}
+	for k: Variant in BannerArtDB._arts:
+		var a: BannerArt = BannerArtDB._arts[k]
+		if a != null and a.texture != null:
+			arts[k] = a.texture
+	caches["BannerArtDB.arts"] = arts
+	var out: Dictionary = {}
+	var top: Array = []
+	var seen: Dictionary = {}
+	var total: float = 0.0
+	for name: String in caches:
+		var n: int = 0
+		var mb: float = 0.0
+		for k: Variant in caches[name]:
+			var t: Variant = caches[name][k]
+			if not t is Texture2D or t is AtlasTexture:
+				continue
+			var tex: Texture2D = t
+			var size: float = tex.get_width() * tex.get_height() * 4 / 1048576.0
+			n += 1
+			mb += size
+			if not seen.has(tex.get_rid()):
+				seen[tex.get_rid()] = true
+				total += size
+				top.append({"key": "%s %s" % [name, k], "w": tex.get_width(), "h": tex.get_height(), "mb": snappedf(size, 0.01)})
+		out[name] = {"n": n, "mb": snappedf(mb, 0.1)}
+	top.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["mb"] > b["mb"])
+	return {"caches": out, "unique_mb": snappedf(total, 0.1), "top": top.slice(0, 40)}
+
+
 ## The published Dictionary (also callable from tests).
 func snapshot(scene: Node = null) -> Dictionary:
 	if scene == null:
 		scene = get_tree().current_scene
 	var out: Dictionary = {"scene": String(scene.name) if scene != null else "", "buttons": []}
+	# kc-ios-mem: engine memory for soak tests (MB): static (CPU heap in use), texture memory the
+	# renderer holds, live objects / resources.
+	out["mem"] = {"static_mb": snappedf(Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0, 0.1),
+			"tex_mb": snappedf(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0, 0.1),
+			"objects": int(Performance.get_monitor(Performance.OBJECT_COUNT)),
+			"resources": int(Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT))}
+	var router: Node = get_node_or_null(^"/root/SceneRouter")
+	if router != null and router.get(&"trim_stats") != null:
+		out["mem"]["trim"] = router.get(&"trim_stats")
 	var rs: Node = get_node_or_null(^"/root/RunState")
 	if rs != null and rs.get(&"run") != null:
 		out["run_seed"] = rs.run.get(&"seed_value")
+		# kc-ios-save: enough of the run to tell a restored run from a lost step (crash-reload tests).
+		var r: RunProgress = rs.run
+		out["run"] = {"phase": String(r.phase), "match_index": r.match_index, "tickets": r.tickets, "req": r.req,
+				"deck": r.deck.size(), "node": String(r.map.current) if r.map != null else "",
+				"offers": r.pending_offers.size(), "sig": JSON.stringify(r.to_dict()).md5_text()}
+	out["has_save"] = rs != null and rs.has_method(&"has_save") and rs.has_save()
 	if scene == null:
 		return out
 	for n: Node in scene.find_children("*", "Control", true, false):

@@ -68,8 +68,9 @@ static func pick(cfg: RunConfig, cards: Array) -> Dictionary:
 	for c: CardData in chosen:
 		out_cards.append(String(c.id))
 		# Public arts only (never the private pitch's licensed images), default art first.
+		# kc-ios-mem: the manifest says which are licensed (get_art would decode every image).
 		var arts: Array[StringName] = BannerArtDB.alt_arts(c.id).filter(func(a: StringName) -> bool:
-			return not BannerArtDB.get_art(a).licensed)
+			return not BannerArtDB.is_licensed_id(a))
 		if arts.size() < 2:
 			continue
 		var roll: float = rng.randf()

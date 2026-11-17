@@ -210,6 +210,39 @@ static func bitmap(path: String, max_px: int = 0) -> Texture2D:
 	return tex
 
 
+## kc-ios-mem: decoded bitmaps nothing shows any more are kept for a quick re-show only up to this
+## many MB (a 1536x864 backdrop is 5 MB); the rest are dropped by trim().
+const KEEP_UNUSED_MB: float = 16.0
+
+
+## Drops cached bitmaps no node or art holds any more, oldest first, keeping the most recently used
+## ones up to keep_mb. Returns {dropped, freed_mb}. Call BannerArtDB.trim() first (its arts hold
+## bitmaps). SceneRouter calls both after a scene change and every few seconds.
+static func trim(keep_mb: float = KEEP_UNUSED_MB) -> Dictionary:
+	var kept: float = 0.0
+	var freed: float = 0.0
+	var dropped: int = 0
+	# _bitmap_order is oldest first: walk it newest first.
+	for i: int in range(_bitmap_order.size() - 1, -1, -1):
+		var key: String = _bitmap_order[i]
+		if not _bitmaps.has(key) or BannerArtDB._held_outside(_bitmaps, key):
+			continue
+		var mb: float = _bitmap_mb(key)
+		if kept + mb <= keep_mb:
+			kept += mb
+			continue
+		freed += mb
+		dropped += 1
+		_bitmaps.erase(key)
+		_bitmap_order.remove_at(i)
+	return {"dropped": dropped, "freed_mb": freed}
+
+
+static func _bitmap_mb(key: String) -> float:
+	var tex: Texture2D = _bitmaps.get(key)
+	return tex.get_width() * tex.get_height() * 4 / 1048576.0 if tex != null else 0.0
+
+
 ## Drops every cached texture (tests, after changing bitmaps_enabled / missing_paths).
 static func clear_cache() -> void:
 	_cache.clear()

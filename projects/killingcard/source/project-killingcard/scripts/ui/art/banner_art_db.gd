@@ -24,6 +24,9 @@
 #   3. Generated placeholder: a per-id colour gradient with a class silhouette, so every card still
 #      gets a recognisable, distinct banner.
 #   Crops are AtlasTextures on the master (no copies); results are cached per art id.
+#   kc-ios-mem: the caches no longer grow for the whole session (iOS kills a tab that holds too much):
+#   trim() (SceneRouter calls it after every scene change and every few seconds) drops the arts no
+#   node shows any more, keeping only the most recently used ones up to a small budget.
 # Dependencies: BannerArt (scripts/data/banner_art.gd), CardArt (scripts/ui/art/card_art.gd).
 # Author: Mechanics Developer Agent (kc-board)
 class_name BannerArtDB
@@ -90,10 +93,12 @@ static var _licensed_pool: Dictionary = {}    # chassis / weapon id -> Array[Str
 static var _licensed_root: String = ""
 static var _licensed_loaded: bool = false
 static var _frames: Dictionary = {}           # art id -> frame sheet Texture2D
+static var _used: Dictionary = {}             # art id -> Time.get_ticks_msec() of its last use
 
 
 ## The BannerArt for an art id (never null; a generated placeholder at worst).
 static func get_art(art_id: StringName, hint: Dictionary = {}) -> BannerArt:
+	_used[art_id] = Time.get_ticks_msec()
 	if _arts.has(art_id):
 		return _arts[art_id]
 	var art: BannerArt = null
@@ -176,6 +181,20 @@ static func licensed_rows() -> Dictionary:
 				_licensed_pool[key] = [] as Array[StringName]
 			(_licensed_pool[key] as Array[StringName]).append(art_id)
 	return _licensed
+
+
+## kc-ios-mem: true when get_art(art_id) would be a licensed art, read from the manifest only (no
+## image is decoded: the demo collection asks this for every alt art at startup).
+static func is_licensed_id(art_id: StringName) -> bool:
+	if not licensed_enabled or art_id == &"":
+		return false
+	if _arts.has(art_id):
+		return (_arts[art_id] as BannerArt).licensed
+	var row: Dictionary = licensed_rows().get(art_id, _licensed_by_id.get(art_id, {}))
+	if row.is_empty():
+		return false
+	var path: String = String(row["file"])
+	return FileAccess.file_exists(path if path.contains("://") else _licensed_root + path)
 
 
 ## True when licensed art is loaded (the private pitch folder is present and enabled).
@@ -320,6 +339,7 @@ static func camo_for_tier(tier: int) -> StringName:
 static func frames_texture(art: BannerArt) -> Texture2D:
 	if art == null or art.frames_path == "" or art.frame_count < 2:
 		return null
+	_used[art.id] = Time.get_ticks_msec()
 	if _frames.has(art.id):
 		return _frames[art.id]
 	var tex: Texture2D = _load_image(art.frames_path)
@@ -409,6 +429,7 @@ static func portrait_texture(art_id: StringName, hint: Dictionary = {}) -> Textu
 
 static func clear_cache() -> void:
 	_arts.clear()
+	_used.clear()
 	_crops.clear()
 	_licensed.clear()
 	_licensed_by_id.clear()
@@ -418,8 +439,66 @@ static func clear_cache() -> void:
 	_licensed_loaded = false
 
 
+## kc-ios-mem: unused cached arts kept for a quick re-show (MB of decoded RGBA).
+const KEEP_UNUSED_MB: float = 16.0
+
+
+## Drops cached arts that nothing shows (no node holds their crops or frame sheet), oldest first,
+## keeping the most recently used ones up to keep_mb. Returns {dropped, freed_mb, kept_mb}.
+## Textures still on screen are never touched (a node keeps its texture alive anyway).
+static func trim(keep_mb: float = KEEP_UNUSED_MB) -> Dictionary:
+	var unused: Array = []
+	for id: Variant in _arts.keys():
+		if not _art_in_use(id):
+			unused.append([int(_used.get(id, 0)), id, _art_mb(id)])
+	unused.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
+	var kept: float = 0.0
+	var freed: float = 0.0
+	var dropped: int = 0
+	for u: Array in unused:
+		if kept + float(u[2]) <= keep_mb:
+			kept += float(u[2])
+			continue
+		freed += float(u[2])
+		dropped += 1
+		_drop(u[1])
+	return {"dropped": dropped, "freed_mb": freed, "kept_mb": kept}
+
+
+static func _art_in_use(id: StringName) -> bool:
+	return _held_outside(_crops, "%s/banner" % id) or _held_outside(_crops, "%s/portrait" % id) \
+			or _held_outside(_frames, id)
+
+
+## True when cache[key] is referenced by more than the cache and this function's local (2): a node,
+## an art or another cache still holds it. (No loop here: a loop's temporaries add references.)
+static func _held_outside(cache: Dictionary, key: Variant) -> bool:
+	var o: RefCounted = cache.get(key)
+	return o != null and o.get_reference_count() > 2
+
+
+static func _art_mb(id: StringName) -> float:
+	var mb: float = 0.0
+	var art: BannerArt = _arts.get(id)
+	if art != null and art.texture != null:
+		mb += art.texture.get_width() * art.texture.get_height() * 4 / 1048576.0
+	var fr: Texture2D = _frames.get(id)
+	if fr != null:
+		mb += fr.get_width() * fr.get_height() * 4 / 1048576.0
+	return mb
+
+
+static func _drop(id: StringName) -> void:
+	_arts.erase(id)
+	_crops.erase("%s/banner" % id)
+	_crops.erase("%s/portrait" % id)
+	_frames.erase(id)
+	_used.erase(id)
+
+
 static func _crop(art_id: StringName, kind: StringName, hint: Dictionary) -> Texture2D:
 	var key: String = "%s/%s" % [art_id, kind]
+	_used[art_id] = Time.get_ticks_msec()
 	if _crops.has(key):
 		return _crops[key]
 	var art: BannerArt = get_art(art_id, hint)

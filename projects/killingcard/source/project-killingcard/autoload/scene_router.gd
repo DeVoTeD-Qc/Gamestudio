@@ -2,6 +2,9 @@
 # Purpose: SceneRouter autoload. All scene changes go through here so the loading
 #   screen (p17) can sit in front of them. Use the SCENE_* constants, not raw paths.
 #   It also carries the run's match hand-off (p11, see "Run match hand-off" below).
+#   kc-ios-mem: after every scene change (once the old scene is freed) and every TRIM_PERIOD seconds
+#   it trims the art caches (BannerArtDB / CardArt.trim): textures no node shows any more are
+#   dropped beyond a small budget, so a long session does not keep every image it ever decoded.
 # Dependencies: scripts/ui/run/run_flow.gd (match hand-off only).
 # Author: Mechanics Developer Agent (run match hand-off: UI/UX Agent, p11)
 extends Node
@@ -26,6 +29,34 @@ var current_path: String = ""
 var dry_run: bool = false
 ## Last path passed to goto_scene (also in dry_run).
 var last_requested: String = ""
+## kc-ios-mem: seconds between periodic art cache trims (0 = only after scene changes).
+const TRIM_PERIOD: float = 6.0
+## Totals of the art cache trims so far (QA / soak tests): {runs, dropped, freed_mb}.
+var trim_stats: Dictionary = {"runs": 0, "dropped": 0, "freed_mb": 0.0}
+var _trim_timer: Timer = null
+
+
+func _ready() -> void:
+	if DisplayServer.get_name() == "headless" or TRIM_PERIOD <= 0.0:
+		return
+	_trim_timer = Timer.new()
+	_trim_timer.name = "ArtTrim"
+	_trim_timer.wait_time = TRIM_PERIOD
+	_trim_timer.timeout.connect(trim_art_caches)
+	add_child(_trim_timer)
+	_trim_timer.start()
+
+
+## Drops cached art textures nothing shows (beyond the caches' small keep budgets). Returns the
+## MB freed this time.
+func trim_art_caches() -> float:
+	var a: Dictionary = BannerArtDB.trim()
+	var b: Dictionary = CardArt.trim()
+	trim_stats["runs"] = int(trim_stats["runs"]) + 1
+	trim_stats["dropped"] = int(trim_stats["dropped"]) + int(a["dropped"]) + int(b["dropped"])
+	var freed: float = float(a["freed_mb"]) + float(b["freed_mb"])
+	trim_stats["freed_mb"] = float(trim_stats["freed_mb"]) + freed
+	return freed
 
 
 ## Switches to the scene at path on the next idle frame.
@@ -47,6 +78,11 @@ func _change(path: String) -> void:
 		return
 	current_path = path
 	scene_change_finished.emit(path)
+	# The old scene is freed at the end of this frame and the new one is in by the next.
+	if DisplayServer.get_name() != "headless":
+		await get_tree().process_frame
+		await get_tree().process_frame
+		trim_art_caches()
 
 
 # =============================================================================
