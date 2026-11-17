@@ -239,7 +239,7 @@ FP = Firepower, AR = Armor. "KS" means the value comes straight from Killstreak'
 | 13 | **Ace ★** | `halek_wren` | Unit (Elite) | Sniper | 5 | 4/3 | Pick. Its eliminations give +1 extra streak. | KS stats, **renamed + reworded** (was Lt. Halek "Wren") | Pick + ⚡ |
 | 14 | Callout | `callout` | Tactic | — | 0 | — | Instant: reveal red dots in a zone; your first unit to arrive there gets +1 FP. | KS | |
 | 15 | Ammo Resupply | `ammo_resupply` | Tactic | — | 1 | — | Instant: draw 2. | KS | |
-| 16 | Flank Route | `flank_route` | Tactic | — | 1 | — | Move a friendly unit to an adjacent zone; it gains First Shot this round. | KS | |
+| 16 | Flank Route | `flank_route` | Tactic | — | 1 | — | Move a friendly unit to any other zone (kc-fair; was: an adjacent one); it gains First Shot this round. | KS | |
 | 17 | **Smoke Screen** | `smoke_screen` | Tactic | — | 1 | — | Your units in a zone can't be targeted by Pick or Flank this round. | **NEW** | |
 | 18 | **Blackout** | `blackout` | Tactic | — | 1 | — | Enemy units in a zone lose First Shot this round. | **NEW** | |
 | 19 | Suppressing Fire | `suppressing_fire` | Tactic | — | 2 | — | Enemy units in a zone get -1 FP this round. | KS | |
@@ -356,7 +356,9 @@ In `scripts/rules/`, each side has `lines[zone]`: an array ordered **front first
 So the vertical board makes Killstreak's best decisions visible: put a sturdy card in front, keep the medic and sniper behind, and use Pick or Flank to reach past the wall. Shots draw as tracers from the shooter's row to the target's row. A Pick shot visibly skips the frontline.
 
 ### 4.5 Unchanged
-The round structure (Briefing, Deploy, Reveal, Firefight, Score & Streak), Supply, hand, mulligan, initiative, the First Shot and Main steps, simultaneous damage, damage that persists across rounds, Cover, Patch, Holder, streaks, the Streak Tray, Operator down and respawn, game modes, and every Ruling in Killstreak's `core-rules.md` all stay as they are. The AI (`scripts/ai/`) reads the same state and needs no change.
+> **Rules change, 17 Nov 2026 (kc-fair, `ui/feedback-2026-11-17.md`):** there is no initiative any more. Every Reveal step resolves both sides at once (help before harm, the dead removed together), and a move (Operator Rotate, Agile, Flank Route) may go to any other column, not only the next one.
+
+The round structure (Briefing, Deploy, Reveal, Firefight, Score & Streak), Supply, hand, mulligan, the First Shot and Main steps, simultaneous damage, damage that persists across rounds, Cover, Patch, Holder, streaks, the Streak Tray, Operator down and respawn, game modes, and every Ruling in Killstreak's `core-rules.md` all stay as they are. The AI (`scripts/ai/`) reads the same state and needs no change.
 
 ### 4.6 Exact change list
 **Rules engine (`scripts/rules/`): no rule logic changes.** Two display-only touches:

@@ -29,8 +29,6 @@ signal score_changed(player_score: int, enemy_score: int)
 ## The player's end-of-round numbers for the playtest log (p16). Emit it just before
 ## round_ended so the log can put them on the same round_end line.
 signal round_summary(round_number: int, supply_unspent: int, hand_size: int)
-## Which side acts first this round.
-signal initiative_changed(side: StringName)
 
 # --- Cards and deployment ---------------------------------------------------
 signal card_drawn(card_id: StringName)

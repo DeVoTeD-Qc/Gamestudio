@@ -49,10 +49,6 @@ static func describe(check: Dictionary, ctx: Dictionary = {}) -> Dictionary:
 			if kind == &"operator":
 				return _t("HERE NOW", "Your Operator is already here.")
 			return _t("ALREADY HERE", "That unit is already in this column.")
-		&"not_adjacent":
-			if kind == &"operator":
-				return _t("NOT ADJACENT", "Rotate only to an adjacent column.")
-			return _t("NOT ADJACENT", "Move only to an adjacent column.")
 		&"no_rotations_left":
 			return _t("NO ROTATION", "No Rotations left this round.")
 		&"no_operator":

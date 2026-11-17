@@ -50,7 +50,7 @@ const MAX_TEXT_LENGTH: int = 100
 @export_range(0, 5) var patch: int = 0
 @export var holder: bool = false
 ## kc-wip-impl: Agile (wip-set.md §2.2): once per round, in Deploy, you may order this unit to an
-## adjacent column for free; it moves at Reveal and joins the back of that line.
+## other column (kc-fair: any, not just the next one) for free; it moves at Reveal and joins the back of that line.
 @export var agile: bool = false
 ## kc-wip-impl: Beam (wip-set.md §2.4): its shot hits every unit in front of it in its column: each of
 ## your units ahead of it and every enemy unit there (its FP each, minus that unit's Cover).

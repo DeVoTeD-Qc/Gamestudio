@@ -7,9 +7,9 @@
 #     CHOSEN_FRIENDLY; may be the card uid of a unit played earlier this Deploy);
 #     `dest_zone` = destination of a MOVE_UNIT (Flank Route).
 #   - place_operator: place an off-board Operator (Round 1, respawn).
-#   - rotate: move the Operator to an adjacent zone (back of the line).
+#   - rotate: move the Operator to any other zone (back of the line; kc-fair).
 #   - use_item: call in a killstreak by its id.
-#   - move_unit (kc-wip-impl Agile): order an Agile unit on the board to an adjacent zone (free,
+#   - move_unit (kc-wip-impl Agile): order an Agile unit on the board to any other zone (free,
 #     once per round; it moves at Reveal with the arrivals, to the back of that line).
 # Dependencies: none.
 # Author: Mechanics Developer Agent
@@ -39,6 +39,6 @@ static func use_item(item_id: StringName, zone: int = -1, target_uid: int = -1, 
 	return {"type": USE_ITEM, "item_id": item_id, "zone": zone, "target_uid": target_uid, "dest_zone": dest_zone}
 
 
-## kc-wip-impl Agile: move the Agile unit `uid` (on the board) to the adjacent `zone` at Reveal.
+## kc-wip-impl Agile: move the Agile unit `uid` (on the board) to `zone` (any other zone) at Reveal.
 static func move_unit(uid: int, zone: int) -> Dictionary:
 	return {"type": MOVE_UNIT, "uid": uid, "zone": zone}

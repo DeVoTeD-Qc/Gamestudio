@@ -51,7 +51,7 @@ func _supply(m: MatchState, n: int = 10) -> void:
 
 ## Everything about the live state the preview could disturb.
 func _fingerprint(m: MatchState) -> String:
-	var parts: Array = [m.events.size(), m.rng.state, m.phase, m.round_number, m.initiative,
+	var parts: Array = [m.events.size(), m.rng.state, m.phase, m.round_number,
 			m.firefight_effects.size(), m.round_eliminations.size(), m._next_uid, m._play_counter]
 	for s: RulesSide in m.sides:
 		parts.append([s.supply, s.score, s.streak, s.eliminations, s.plays.size(), s.ready, s.rotations_used,

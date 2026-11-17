@@ -37,7 +37,8 @@ func test_bug001_ai_never_plans_a_second_move_for_the_same_unit() -> void:
 		if rc.card.id == &"flank_route":
 			fr.append(rc.uid)
 	assert_true(m.submit(E, RulesIntent.play_card(fr[0], F.LEFT, mover.uid, F.MID))["ok"], "first move")
-	assert_false(m.submit(E, RulesIntent.play_card(fr[1], F.MID, mover.uid, F.RIGHT))["ok"], "second move refused")
+	var second: Dictionary = m.submit(E, RulesIntent.play_card(fr[1], F.MID, mover.uid, F.RIGHT))
+	assert_eq([second["ok"], second["code"]], [false, &"already_moved"], "second move refused (kc-fair: one move per unit per round)")
 
 
 # --- Edge cases not yet pinned down (core-rules §9, Rulings 1 and 2) --------------------------

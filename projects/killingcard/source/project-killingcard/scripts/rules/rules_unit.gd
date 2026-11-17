@@ -39,7 +39,7 @@ var cover: int = 0
 var suppress: bool = false
 ## kc-wip-impl: Suppress N (the Operator: the largest of its parts).
 var suppress_amount: int = 2
-## kc-wip-impl: Agile (a free order to an adjacent column, once per round) and Beam (its shot hits
+## kc-wip-impl: Agile (a free order to any other column, once per round) and Beam (its shot hits
 ## every unit in front of it in its column, friends included).
 var agile: bool = false
 var beam: bool = false

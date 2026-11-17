@@ -197,7 +197,7 @@ func test_agile_order_rules_and_undo() -> void:
 	var m: MatchState = F.new_match()
 	var runner: RulesUnit = F.place(m, P, _card("runner"), L)
 	var plain: RulesUnit = F.place(m, P, _u("plain", 1, 3), L)
-	assert_eq(m.can_submit(P, RulesIntent.move_unit(runner.uid, R))["code"], &"not_adjacent", "adjacent only")
+	assert_true(m.can_submit(P, RulesIntent.move_unit(runner.uid, R))["ok"], "kc-fair: any column (A -> C)")
 	assert_eq(m.can_submit(P, RulesIntent.move_unit(runner.uid, L))["code"], &"same_zone", "not its own column")
 	assert_eq(m.can_submit(P, RulesIntent.move_unit(plain.uid, M))["code"], &"not_agile", "only Agile units")
 	var supply: int = m.sides[P].supply
@@ -251,7 +251,7 @@ func test_ai_offers_and_can_play_an_agile_move() -> void:
 	var planner: AiPlanner = AiPlanner.new()
 	planner._begin(AiView.capture(m, E))
 	var moves: Array = planner._candidates(planner._root_plan()).filter(func(c: Dictionary) -> bool: return c["kind"] == &"agile")
-	assert_eq(moves.map(func(c: Dictionary) -> int: return int(c["dest_zone"])), [M], "the AI offers the Runner's move to B")
+	assert_eq(moves.map(func(c: Dictionary) -> int: return int(c["dest_zone"])), [M, R], "the AI offers the Runner's move to B and C (kc-fair: any column)")
 	var ai: AiPlayer = AiPlayer.new()
 	var intents: Array[Dictionary] = ai.take_turn(m, E)
 	var agile: Array = intents.filter(func(i: Dictionary) -> bool: return i["type"] == RulesIntent.MOVE_UNIT)

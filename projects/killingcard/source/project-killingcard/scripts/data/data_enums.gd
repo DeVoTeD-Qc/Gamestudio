@@ -103,7 +103,7 @@ enum ZoneScope {
 	CHOSEN_ZONE,          ## Player picks any zone.
 	OPERATOR_ZONE,        ## Owner's Operator's zone.
 	OPERATOR_OR_ADJACENT, ## Player picks the Operator's zone or one adjacent to it.
-	ADJACENT_ZONE,        ## Player picks a zone adjacent to the target's zone (MOVE_UNIT).
+	ADJACENT_ZONE,        ## MOVE_UNIT: player picks the destination; kc-fair: ANY other zone (name kept for saved data).
 	ALL_ZONES,
 	ANY,                  ## Not zone-bound (draw, streak, thresholds).
 }

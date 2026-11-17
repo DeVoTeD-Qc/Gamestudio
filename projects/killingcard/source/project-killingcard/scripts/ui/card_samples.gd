@@ -19,7 +19,7 @@ const CARDS: Array[Dictionary] = [
 	{"name": "Lt. Halek \"Wren\"", "type": "unit", "weapon_class": "sniper", "cost": 5, "firepower": 4, "armor": 3, "elite": true, "keywords": ["pick"], "text": "Her eliminations give +1 extra streak."},
 	{"name": "Callout", "type": "tactic", "cost": 0, "text": "Instant: reveal red dots in a zone; your next unit there gets +1 FP this round."},
 	{"name": "Ammo Resupply", "type": "tactic", "cost": 1, "text": "Instant: draw 2."},
-	{"name": "Flank Route", "type": "tactic", "cost": 1, "text": "Move your unit to an adjacent column. It gets First Shot this round."},
+	{"name": "Flank Route", "type": "tactic", "cost": 1, "text": "Move your unit to any other column. It gets First Shot this round."},
 	{"name": "Suppressing Fire", "type": "tactic", "cost": 2, "text": "Enemy units in a zone get −1 FP this round."},
 	{"name": "Hold the Line", "type": "tactic", "cost": 2, "text": "Your units in a column get Cover 1 this round."},
 	{"name": "Breach and Clear", "type": "tactic", "cost": 3, "text": "Deal 2 damage to each enemy unit in a column."},

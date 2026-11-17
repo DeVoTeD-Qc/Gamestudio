@@ -1,7 +1,7 @@
 # test_rules_round.gd
 # Purpose: p04 round loop: Briefing (Supply, draws, hand cap, reshuffle, mulligan),
 #   Deploy (intents, Supply, zone capacity, Operator placement / Rotation, red dots,
-#   immediate effects, undo), Reveal (initiative, arrival order, Shieldman, Callout,
+#   immediate effects, undo), Reveal (simultaneous: no initiative; arrival order, Shieldman, Callout,
 #   tactics / equipment / items in play order), Score (streak baseline, END_OF_ROUND),
 #   hooks and determinism.
 # Author: Mechanics Developer Agent
@@ -119,7 +119,7 @@ func test_operator_placement_and_rotation_rules() -> void:
 	var op: RulesUnit = m.sides[P].operator_unit
 	assert_eq(op.zone, F.LEFT, "placed")
 	F.place(m, P, F.unit("holder_of_right", 0, 9), F.RIGHT)
-	assert_false(m.submit(P, RulesIntent.rotate(F.RIGHT))["ok"], "flanks are not adjacent")
+	assert_eq(m.can_submit(P, RulesIntent.rotate(F.RIGHT))["code"], &"ok", "kc-fair: the far flank is in reach")
 	F.place(m, P, F.unit("first_in_mid", 0, 9), F.MID)
 	assert_true(m.submit(P, RulesIntent.rotate(F.MID))["ok"], "Left -> Mid")
 	assert_false(m.submit(P, RulesIntent.rotate(F.RIGHT))["ok"], "one Rotation per round")
@@ -169,21 +169,48 @@ func test_ammo_resupply_draws_immediately() -> void:
 
 # --- Reveal -----------------------------------------------------------------------------
 
-func test_initiative_behind_side_first_ties_to_player() -> void:
-	var p: SideSetup = F.setup([F.suppressing_fire()])
-	var e: SideSetup = F.setup([F.suppressing_fire()])
-	var m: MatchState = F.new_match(p, e)
-	m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "suppressing_fire"), F.MID))
-	m.submit(E, RulesIntent.play_card(F.hand_uid(m, E, "suppressing_fire"), F.MID))
-	m.resolve_round()
-	var reveals: Array = F.events_of(m, RulesEvent.CARD_REVEALED).map(func(ev: Dictionary) -> StringName: return ev["side"])
-	assert_eq(F.events_of(m, RulesEvent.INITIATIVE)[0]["side"], &"player", "tie -> player")
-	assert_eq(reveals, [&"player", &"enemy"], "player resolves first")
-	m.begin_round()
-	m.sides[P].score = 2
-	m.sides[E].score = 1
-	m.resolve_round()
-	assert_eq(F.events_of(m, RulesEvent.INITIATIVE)[1]["side"], &"enemy", "enemy is behind -> enemy first")
+## kc-fair (studio head, 17 Nov 2026: "there shouldn't be any [impact of being first]"): no side goes
+## first. Each Reveal step resolves both sides at once (help before harm, the dead removed together), so
+## mirrored plays give mirrored results whoever leads on score, and in whatever order each side played.
+func test_no_side_goes_first_mirrored_plays_mirrored_results() -> void:
+	for lead: int in [P, E]:
+		for help_first: bool in [true, false]:
+			var deck: Array = [F.breach_and_clear(), F.hold_the_line()]
+			var m: MatchState = F.new_match(F.setup(deck.duplicate()), F.setup(deck.duplicate()))
+			m.sides[lead].score = 2
+			var mine: RulesUnit = F.place(m, P, F.unit("p_x", 0, 2), F.MID)
+			var theirs: RulesUnit = F.place(m, E, F.unit("e_x", 0, 2), F.MID)
+			for si: int in [P, E]:
+				m.sides[si].supply = 9
+				var order: Array = ["hold_the_line", "breach_and_clear"]
+				if not help_first and si == P:
+					order.reverse()  # the player plays its damage first: it changes nothing
+				for id: String in order:
+					assert_true(m.submit(si, RulesIntent.play_card(F.hand_uid(m, si, id), F.MID))["ok"], "%s plays %s" % [si, id])
+			m.reveal()
+			var label: String = "lead %s, player plays help first %s" % [m.side_name(lead), help_first]
+			assert_eq([mine.armor, theirs.armor], [1, 1], "%s: both Covered before both hits: 2 - 1 each" % label)
+			assert_true(mine.is_on_board() and theirs.is_on_board(), "%s: both survive" % label)
+	var m2: MatchState = F.new_match(F.setup([F.hold_the_line()]), F.setup([F.hold_the_line()]))
+	m2.resolve_round()
+	assert_false(m2.events.any(func(ev: Dictionary) -> bool: return ev["type"] == &"initiative"), "no initiative event any more")
+
+
+func test_on_deploy_of_both_sides_sees_both_arrivals() -> void:
+	# Old rule: the side with initiative arrived (and fired its On Deploy) before the other side's units
+	# were on the board. kc-fair: every arrival is placed first, then every On Deploy resolves.
+	var zap: Array = [F.eff(DataEnums.Trigger.ON_DEPLOY, DataEnums.EffectKind.DAMAGE, DataEnums.Target.ALL_ENEMIES,
+			DataEnums.ZoneScope.THIS_ZONE, 1)]
+	for lead: int in [P, E]:
+		var p_card: CardData = F.unit("p_zapper", 0, 3, 0, {"effects": zap})
+		var e_card: CardData = F.unit("e_zapper", 0, 3, 0, {"effects": zap})
+		var m: MatchState = F.new_match(F.setup([p_card]), F.setup([e_card]))
+		m.sides[lead].score = 3
+		assert_true(m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "p_zapper"), F.LEFT))["ok"], "player zapper")
+		assert_true(m.submit(E, RulesIntent.play_card(F.hand_uid(m, E, "e_zapper"), F.LEFT))["ok"], "enemy zapper")
+		m.reveal()
+		var armors: Array = [m.sides[P].line(F.LEFT)[0].armor, m.sides[E].line(F.LEFT)[0].armor]
+		assert_eq(armors, [2, 2], "lead %s: each zapper hit the other (3 - 1)" % m.side_name(lead))
 
 
 func test_arrivals_in_play_order_and_shieldman_ruling() -> void:
@@ -299,7 +326,7 @@ func test_timed_minus_two_fp_and_no_first_shot_this_round() -> void:
 func test_flank_route_moves_unit_and_grants_first_shot() -> void:
 	var m: MatchState = F.new_match(F.setup([F.flank_route()]))
 	var u: RulesUnit = F.place(m, P, F.unit("mover", 2, 2), F.LEFT)
-	assert_false(m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "flank_route"), -1, u.uid, F.RIGHT))["ok"], "not adjacent")
+	assert_true(m.can_submit(P, RulesIntent.play_card(F.hand_uid(m, P, "flank_route"), -1, u.uid, F.RIGHT))["ok"], "kc-fair: Left -> Right is legal")
 	assert_true(m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "flank_route"), -1, u.uid, F.MID))["ok"], "Left -> Mid")
 	var enemy: RulesUnit = F.place(m, E, F.unit("e", 9, 2), F.MID)
 	m.reveal()

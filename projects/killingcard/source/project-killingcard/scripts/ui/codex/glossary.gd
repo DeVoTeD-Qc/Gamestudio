@@ -456,7 +456,7 @@ func _draw_icon(c: Control, e: Dictionary) -> void:
 			c.draw_circle(r.get_center(), s * 0.26, Color("#FFB020"))
 			c.draw_arc(r.get_center(), s * 0.26, 0, TAU, 24, Color.WHITE, 1.5, true)
 		&"agile":
-			# kc-wip-impl: a sideways double arrow (a free move to the next column).
+			# kc-wip-impl: a sideways double arrow (a free move to any other column).
 			c.draw_line(Vector2(6, s * 0.5), Vector2(s - 6, s * 0.5), accent, 3.0)
 			c.draw_colored_polygon(PackedVector2Array([Vector2(4, s * 0.5), Vector2(14, s * 0.3), Vector2(14, s * 0.7)]), accent)
 			c.draw_colored_polygon(PackedVector2Array([Vector2(s - 4, s * 0.5), Vector2(s - 14, s * 0.3), Vector2(s - 14, s * 0.7)]), accent)

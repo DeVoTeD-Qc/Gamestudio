@@ -323,17 +323,17 @@ func _candidates(p: Plan) -> Array[Dictionary]:
 				if _occupancy(p, z) < cap:
 					out.append(_action(&"place", z, _syn_zones([z])))
 		elif _view.op_zone >= 0 and p.op_zone >= 0 and p.rotations_left > 0 and not p.op_locked:
-			for z: int in [p.op_zone - 1, p.op_zone + 1]:
-				if z >= 0 and z < 3 and _occupancy(p, z) < cap:
+			for z: int in 3:  # kc-fair: a move may go to any other column
+				if z != p.op_zone and _occupancy(p, z) < cap:
 					out.append(_action(&"rotate", z, _syn_zones([p.op_zone, z])))
-	# kc-wip-impl Agile: a free order moving one of my Agile units on the board to an adjacent column.
+	# kc-wip-impl Agile: a free order moving one of my Agile units on the board to another column.
 	for z: int in 3:
 		for rec: Dictionary in p.lines[ME][z]:
 			if not bool(rec.get("agile", false)) or rec["new"] or rec["is_op"] or int(rec["armor"]) <= 0 \
 					or rec.get("moved", false) or p.agile_moved.has(int(rec["uid"])):
 				continue
-			for dest: int in [z - 1, z + 1]:
-				if dest >= 0 and dest < 3 and _occupancy(p, dest) < cap:
+			for dest: int in 3:  # kc-fair: any other column
+				if dest != z and _occupancy(p, dest) < cap:
 					var am: Dictionary = _action(&"agile", z, _syn_zones([z, dest]))
 					am["target_uid"] = rec["uid"]
 					am["dest_zone"] = dest
@@ -404,8 +404,8 @@ func _effect_candidates(p: Plan, owner: Resource, effects: Array[EffectData]) ->
 				# unit's board zone, so a second Flank Route on it would be refused (p18 bug 001).
 				if rec["new"] or rec["is_op"] or int(rec["armor"]) <= 0 or rec.get("moved", false):
 					continue
-				for dest: int in [z - 1, z + 1]:
-					if dest >= 0 and dest < 3 and _occupancy(p, dest) < _view.zone_capacity:
+				for dest: int in 3:  # kc-fair: any other column
+					if dest != z and _occupancy(p, dest) < _view.zone_capacity:
 						var a: Dictionary = _action(&"tactic", z, _syn_zones([z, dest]))
 						a["target_uid"] = rec["uid"]
 						a["dest_zone"] = dest

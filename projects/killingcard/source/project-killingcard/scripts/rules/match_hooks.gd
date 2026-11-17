@@ -6,7 +6,7 @@
 #     can_use_item / on_item_resolved, on_elimination, on_operator_down,
 #     operator_can_deploy (respawn rules), apply_streak (trays, once-per-life).
 #   - p06 modes: set `mode_rules` (ModeRules.create(mode, config)); the default
-#     initiative_side / score_round / check_match_end / match_end_details delegate
+#     score_round / check_match_end / match_end_details delegate
 #     to it, so a p05 subclass keeps mode rules as long as it doesn't override those.
 #     Without mode_rules the match never ends (p04 sandbox, used by engine tests).
 #   Hooks receive the MatchState as `state` (untyped to keep scripts acyclic).
@@ -19,16 +19,6 @@ extends RefCounted
 
 ## Mode scoring / match end (p06). Null = no mode: no points, never ends.
 var mode_rules: ModeRules = null
-
-
-## Which side resolves first at Reveal. Default (core-rules §2.3): the side behind
-## on the scoreboard; ties -> the player.
-func initiative_side(state) -> int:
-	if mode_rules != null:
-		return mode_rules.initiative_side(state)
-	var p: int = state.sides[0].score
-	var e: int = state.sides[1].score
-	return 1 if e < p else 0
 
 
 ## Briefing, after Supply and draws: per-round uses reset, Grit arms (p05).

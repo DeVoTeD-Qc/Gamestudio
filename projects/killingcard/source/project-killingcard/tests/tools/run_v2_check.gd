@@ -235,7 +235,7 @@ func _play(m: MatchState, a: AiPlayer, b: AiPlayer, track: bool = false) -> void
 		if track:
 			init_stats[0] += 1
 		m.resolve_round()
-		if track and m.initiative == 0:
+		if track and false:  # kc-fair: initiative is gone (nobody goes first)
 			init_stats[1] += 1
 		m.begin_round()
 

@@ -12,7 +12,8 @@
 #              START_OF_FIREFIGHT damage (Attack Helo) is registered as before, for its rounds.
 #     Fight 0  Killstreak strikes, one at a time, in queue order: strikes still standing from an
 #              earlier round first (Attack Helo's second pass), then this round's calls in Reveal
-#              order (initiative side first, each side's plays in order). Each strike:
+#              order (kc-fair: no initiative; the player's calls are listed before the rival's, and a
+#              strike only hits the other side, so that order never changes what it does). Each strike:
 #              KILLSTREAK_STRIKE -> its damage (DAMAGE_DEALT, SURVIVED_LETHAL) -> the dead are
 #              removed (UNIT_ELIMINATED) -> KILLSTREAK_RESOLVED {hits, kills, what}. The next strike
 #              sees the board as the last one left it. Then the lines close up (LINE_ADVANCED)

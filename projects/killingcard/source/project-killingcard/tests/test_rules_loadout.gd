@@ -110,7 +110,7 @@ func test_tripwire_armed_before_arrivals_on_deploy_resolves_first() -> void:
 	var p: SideSetup = F.setup([F.tripwire()])
 	var e: SideSetup = F.setup([F.recon_specialist()])
 	var m: MatchState = F.new_match(p, e)
-	m.submit(E, RulesIntent.play_card(F.hand_uid(m, E, "recon_specialist"), F.RIGHT))  # initiative: player (tie)
+	m.submit(E, RulesIntent.play_card(F.hand_uid(m, E, "recon_specialist"), F.RIGHT))  # both sides at once (kc-fair)
 	m.submit(P, RulesIntent.play_card(F.hand_uid(m, P, "tripwire_charge"), F.RIGHT))
 	m.reveal()
 	var types: Array = m.events.map(func(ev: Dictionary) -> StringName: return ev["type"])

@@ -7,7 +7,7 @@
 #   copies. Immutable data is shared: CardData / EffectData / LoadoutItem / MapData resources,
 #   RunConfig, SideSetup and RulesCard (a uid + CardData pair the engine never changes).
 #   MatchHooks is shared too. Reveal and Firefight only call hooks that read the state or write
-#   to the state they are given (initiative, on_elimination, on_item_resolved); do not run
+#   to the state they are given (on_elimination, on_item_resolved); do not run
 #   score() on a copy that shares ModeRules (score_round / check_match_end store outcome data
 #   on the hooks). OutcomeForecast stops after the Firefight for that reason.
 #   Copying is generic over each class's script variables, so fields added later are copied too.

@@ -58,8 +58,10 @@ var sides: Array[RulesSide] = []
 
 var round_number: int = 0
 var phase: Phase = Phase.SETUP
-## Side that resolves first at this round's Reveal.
-var initiative: int = PLAYER
+## kc-fair (studio head, 17 Nov 2026: "there shouldn't be any [impact of being first]"): there is no
+## initiative. Every Reveal step resolves both sides at once (_simultaneous): help before harm, and
+## nobody is removed until the step is over. > 0 while a step defers eliminations.
+var _defer_deaths: int = 0
 ## False in modes without respawn (Detonator). Read by MatchHooks.operator_can_deploy.
 var respawn_enabled: bool = true
 ## &"" while running; &"player" / &"enemy" / &"draw" once ended.
@@ -293,7 +295,7 @@ func submit(side: int, intent: Dictionary) -> Dictionary:
 ##   no_zone, zone_full {zone, capacity}                         (where it goes)
 ##   operator_not_placed, out_of_range {operator_zone}           (Operator-zone effects)
 ##   no_target {want: &"enemy"|&"friendly"}, target_out_of_range {operator_zone}
-##   same_zone, not_adjacent {from_zone}                         (moves, Rotations)
+##   same_zone {from_zone}                                       (moves, Rotations: any other column)
 ##   not_in_loadout, not_in_tray,
 ##   no_uses_left {per: &"round"|&"match"}                       (loadout items)
 ##   no_operator, cant_place, already_placed, no_rotations_left {allowed}   (Operator)
@@ -486,9 +488,9 @@ func _check_rotate(side: int, zone: int) -> Dictionary:
 	if s.rotations_used >= allowed:
 		return _fail("no Rotations left this round", &"no_rotations_left", {"allowed": allowed})
 	if zone == from:
-		return _fail("Rotate only to an adjacent zone", &"same_zone", {"from_zone": from})
-	if not is_zone(zone) or not are_adjacent(from, zone):
-		return _fail("Rotate only to an adjacent zone", &"not_adjacent", {"from_zone": from})
+		return _fail("pick another column", &"same_zone", {"from_zone": from})
+	if not can_move_between(from, zone):
+		return _fail("pick a column", &"no_zone", {"from_zone": from})
 	if projected_occupancy(side, zone) >= config.zone_capacity:
 		return _zone_full(zone)
 	var play: Dictionary = _draft_play(&"rotate", zone, {})
@@ -497,20 +499,20 @@ func _check_rotate(side: int, zone: int) -> Dictionary:
 
 
 ## kc-wip-impl Agile (wip-set.md §2.2): a free order for an Agile unit of `side` on the board to move to
-## the adjacent `zone` at Reveal. Once per unit per round; the destination needs room (projected).
+## `zone` at Reveal (kc-fair: any other column, not just the next one). Once per unit per round; the
+## destination needs room (projected).
 func _check_agile(side: int, uid: int, zone: int) -> Dictionary:
 	var u: RulesUnit = sides[side].find_unit(uid)
 	if u == null or u.is_operator:
 		return _fail("pick one of your units on the board", &"no_target", {"want": &"friendly"})
 	if not u.agile:
 		return _fail("only an Agile unit can move like this", &"not_agile", {"uid": uid})
-	for p: Dictionary in sides[side].plays:
-		if p["kind"] == &"agile" and int(p["target_uid"]) == uid:
-			return _fail("it already has a move order this round", &"already_moved", {"uid": uid})
+	if _has_move_order(side, uid):
+		return _fail("it already has a move order this round", &"already_moved", {"uid": uid})
 	if zone == u.zone:
-		return _fail("move only to an adjacent zone", &"same_zone", {"from_zone": u.zone})
-	if not is_zone(zone) or not are_adjacent(u.zone, zone):
-		return _fail("move only to an adjacent zone", &"not_adjacent", {"from_zone": u.zone})
+		return _fail("pick another column", &"same_zone", {"from_zone": u.zone})
+	if not can_move_between(u.zone, zone):
+		return _fail("pick a column", &"no_zone", {"from_zone": u.zone})
 	if projected_occupancy(side, zone) >= config.zone_capacity:
 		return _zone_full(zone)
 	var play: Dictionary = _draft_play(&"agile", zone, {"target_uid": uid})
@@ -562,14 +564,31 @@ func _check_targets(side: int, effects: Array[EffectData], play: Dictionary, zon
 				if e.kind == DataEnums.EffectKind.MOVE_UNIT:
 					var dest: int = play["dest_zone"] if is_zone(play["dest_zone"]) else zone
 					if dest == friendly_zone:
-						return _fail("move only to an adjacent zone", &"same_zone", {"from_zone": friendly_zone})
-					if not is_zone(dest) or not are_adjacent(friendly_zone, dest):
-						return _fail("move only to an adjacent zone", &"not_adjacent", {"from_zone": friendly_zone})
+						return _fail("pick another column", &"same_zone", {"from_zone": friendly_zone})
+					# kc-fair: one move per unit per round (with any column in reach, a second order
+					# would just be a longer first one).
+					if _has_move_order(side, target_uid):
+						return _fail("it already has a move order this round", &"already_moved", {"uid": target_uid})
+					if not can_move_between(friendly_zone, dest):
+						return _fail("pick a column", &"no_zone", {"from_zone": friendly_zone})
 					play["dest_zone"] = dest
 					# Legal, but it fizzles at Reveal if the zone is still full (Rulings): flag it.
 					if projected_occupancy(side, dest) >= config.zone_capacity:
 						warnings.append(&"dest_full")
 	return {}
+
+
+## kc-fair: true when a play of this Deploy already moves unit `uid` (an Agile order or a MOVE_UNIT card).
+func _has_move_order(side: int, uid: int) -> bool:
+	for p: Dictionary in sides[side].plays:
+		if int(p.get("target_uid", -1)) != uid:
+			continue
+		if p["kind"] == &"agile":
+			return true
+		for e: EffectData in _play_effects(p):
+			if e != null and e.kind == DataEnums.EffectKind.MOVE_UNIT:
+				return true
+	return false
 
 
 ## Zone of a friendly unit on the board, or of a unit card played earlier this Deploy.
@@ -699,41 +718,63 @@ func _resolve_immediate(side: int, effects: Array[EffectData], play: Dictionary,
 func reveal() -> void:
 	var reveal_start: int = events.size()
 	_set_phase(Phase.REVEAL)
-	initiative = hooks.initiative_side(self)
-	emit_event(RulesEvent.INITIATIVE, {"side": side_name(initiative)})
-	var order: Array[int] = side_order()
-	# Callout-style buffs played with ON_PLAY also catch arrivals of this Reveal (Ruling 7).
-	for si: int in order:
+	# Callout-style buffs played with ON_PLAY also catch arrivals of this Reveal (Ruling 7). A side's
+	# buff only ever touches its own arrivals.
+	for si: int in side_order():
 		for play: Dictionary in sides[si].plays:
 			var effects: Array[EffectData] = _play_effects(play)
 			for e: EffectData in effects:
 				if e != null and e.trigger == DataEnums.Trigger.ON_PLAY and e.target == DataEnums.Target.NEXT_FRIENDLY_ARRIVING:
 					var src: Array = _play_source(play)
 					EffectResolver.resolve_effect(self, e, make_ctx(si, src[0], src[1], src[2], play["zone"], -1, -1))
-	# Rulings part 2 #2: Equipment played this Deploy is placed and armed before step a
-	# (initiative side first), so a Tripwire catches units arriving this Reveal.
-	for si: int in order:
+	# kc-fair: every step below takes both sides AT ONCE (no initiative, no "first"): help before harm,
+	# and nobody is removed until the step is over (_simultaneous).
+	# Rulings part 2 #2: Equipment played this Deploy is placed and armed before step a, so a Tripwire
+	# catches units arriving this Reveal.
+	var fields: Array[Dictionary] = []
+	for si: int in side_order():
 		for play: Dictionary in sides[si].plays:
 			if play["kind"] == &"equipment":
-				_reveal_equipment(si, play)
-	# a. Units (and Operator placements / Rotations) arrive in play order.
-	for si: int in order:
+				fields.append({"harm": effects_harm(_play_effects(play)), "call": _reveal_equipment.bind(si, play)})
+	_simultaneous(fields)
+	# a. Units (and Operator placements / Rotations / moves) arrive, each side in its play order (a side's
+	#    arrivals only ever compete with its own for room). Then the On Deploy effects of every arrival
+	#    of both sides (help, then harm), then the traps they set off; the dead go at the end.
+	_defer_deaths += 1
+	var deployed: Array[Dictionary] = []
+	var arrived: Array[RulesUnit] = []
+	for si: int in side_order():
 		var waiting: Array[Dictionary] = []
 		for play: Dictionary in sides[si].plays:
 			if play["kind"] in [&"unit", &"place", &"rotate", &"agile"]:
-				if not _arrive(si, play):
+				if not _arrive(si, play, deployed, arrived):
 					waiting.append(play)
 		for play: Dictionary in waiting:  # a slot freed later in play order
-			if not _arrive(si, play):
+			if not _arrive(si, play, deployed, arrived):
 				_waste_arrival(si, play)
-	# b. Tactics and loadout items in play order (Equipment was placed before step a).
-	for si: int in order:
+	for harm: bool in [false, true]:
+		for d: Dictionary in deployed:
+			var u: RulesUnit = d["unit"]
+			var on_deploy: Array[EffectData] = _triggered(u.effects, DataEnums.Trigger.ON_DEPLOY)
+			if on_deploy.is_empty() or effects_harm(on_deploy) != harm:
+				continue
+			for e: EffectData in on_deploy:
+				EffectResolver.resolve_effect(self, e, d["ctx"])
+	for u: RulesUnit in arrived:
+		if u.is_on_board():
+			trigger_traps(u.side, u)
+	_defer_deaths -= 1
+	process_eliminations()
+	# b. Tactics and loadout items, both sides at once (Equipment was placed before step a).
+	var acts: Array[Dictionary] = []
+	for si: int in side_order():
 		for play: Dictionary in sides[si].plays:
 			match play["kind"]:
 				&"tactic":
-					_reveal_tactic(si, play)
+					acts.append({"harm": effects_harm(_play_effects(play)), "call": _reveal_tactic.bind(si, play)})
 				&"item":
-					_reveal_item(si, play)
+					acts.append({"harm": effects_harm(_play_effects(play)), "call": _reveal_item.bind(si, play)})
+	_simultaneous(acts)
 	for s: RulesSide in sides:
 		for buff: Dictionary in s.arrival_buffs:
 			emit_event(RulesEvent.EFFECT_WASTED, {"side": side_name(s.index), "source_id": buff["source_id"],
@@ -745,8 +786,57 @@ func reveal() -> void:
 	announce_synergy()
 
 
-## Places the unit / Operator of an arrival play. False if its zone is full right now.
-func _arrive(si: int, play: Dictionary) -> bool:
+## kc-fair (studio head: no advantage to being first). One step of both sides' plays, resolved at once:
+## every entry ({harm: bool, call: Callable}) that helps (buffs, heals, Cover, moves, draws...) goes
+## before every entry that harms (damage, Cover / First Shot removal, Field destruction, anything aimed
+## at the other side); within each group the player's plays are listed before the rival's, which can't
+## matter: a helping play only touches its own side and a harming play only the other one, and no unit
+## is removed until the whole step is over (a unit downed here still gets the rest of the step's
+## effects, like two shots of one beat). Then the dead are removed together (process_eliminations).
+func _simultaneous(entries: Array[Dictionary]) -> void:
+	if entries.is_empty():
+		return
+	_defer_deaths += 1
+	for harm: bool in [false, true]:
+		for en: Dictionary in entries:
+			if bool(en["harm"]) == harm:
+				(en["call"] as Callable).call()
+	_defer_deaths -= 1
+	process_eliminations()
+
+
+const _HARM_KINDS: Array[int] = [DataEnums.EffectKind.DAMAGE, DataEnums.EffectKind.REMOVE_COVER,
+		DataEnums.EffectKind.REMOVE_FIRST_SHOT, DataEnums.EffectKind.DESTROY_EQUIPMENT]
+const _ENEMY_TARGETS: Array[int] = [DataEnums.Target.CHOSEN_ENEMY, DataEnums.Target.ENEMY_POINT_MAN,
+		DataEnums.Target.ENEMY_SECOND_IN_LINE, DataEnums.Target.ALL_ENEMIES, DataEnums.Target.ARRIVING_ENEMY,
+		DataEnums.Target.ENEMY_EQUIPMENT]
+
+
+## kc-fair: true when any of these effects harms (deals damage, strips Cover / First Shot, destroys a
+## Field, or aims at the other side at all); false for pure help / info.
+static func effects_harm(effects: Array) -> bool:
+	for e: Variant in effects:
+		if e is EffectData:
+			var ed: EffectData = e
+			if ed.kind in _HARM_KINDS or ed.target in _ENEMY_TARGETS:
+				return true
+			if ed.kind == DataEnums.EffectKind.MODIFY_FIREPOWER and ed.amount < 0:
+				return true
+	return false
+
+
+static func _triggered(effects: Array[EffectData], trigger: int) -> Array[EffectData]:
+	var out: Array[EffectData] = []
+	for e: EffectData in effects:
+		if e != null and e.trigger == trigger:
+			out.append(e)
+	return out
+
+
+## Places the unit / Operator of an arrival play. False if its zone is full right now. kc-fair: a new
+## unit's On Deploy context goes to `deployed` ({si, unit, ctx}) and every arrival to `arrived` (traps):
+## reveal() resolves them once every arrival of both sides is on the board.
+func _arrive(si: int, play: Dictionary, deployed: Array[Dictionary], arrived: Array[RulesUnit]) -> bool:
 	var s: RulesSide = sides[si]
 	var zone: int = play["zone"]
 	match play["kind"]:
@@ -760,10 +850,8 @@ func _arrive(si: int, play: Dictionary) -> bool:
 			_apply_arrival_buff(si, u)
 			var ctx: Dictionary = make_ctx(si, SRC_UNIT, u.source_id, u.uid, zone, play["target_uid"], play["dest_zone"])
 			ctx["source_unit"] = u
-			for e: EffectData in u.effects:
-				if e != null and e.trigger == DataEnums.Trigger.ON_DEPLOY:
-					EffectResolver.resolve_effect(self, e, ctx)
-			trigger_traps(si, u)
+			deployed.append({"si": si, "unit": u, "ctx": ctx})
+			arrived.append(u)
 		&"place":
 			var op: RulesUnit = s.operator_unit
 			if op.is_on_board():
@@ -775,7 +863,7 @@ func _arrive(si: int, play: Dictionary) -> bool:
 			put_in_line(op, zone, false)
 			s.operator_can_deploy = false
 			emit_event(RulesEvent.OPERATOR_PLACED, {"side": side_name(si), "uid": op.uid, "zone": zone_name(zone)})
-			trigger_traps(si, op)
+			arrived.append(op)
 		&"rotate":
 			var op: RulesUnit = s.operator_unit
 			if not op.is_on_board() or op.zone == zone:
@@ -787,12 +875,12 @@ func _arrive(si: int, play: Dictionary) -> bool:
 			s.line(from).erase(op)
 			put_in_line(op, zone, false)
 			emit_event(RulesEvent.OPERATOR_ROTATED, {"side": side_name(si), "uid": op.uid, "from_zone": zone_name(from), "zone": zone_name(zone)})
-			trigger_traps(si, op)
+			arrived.append(op)
 		&"agile":
-			# kc-wip-impl Agile: the ordered unit moves to the back of the adjacent line (a full
+			# kc-wip-impl Agile: the ordered unit moves to the back of the chosen line (a full
 			# destination waits for the retry, then fizzles: the unit stays).
 			var u: RulesUnit = s.find_unit(int(play["target_uid"]))
-			if u == null or not u.is_alive() or u.zone == zone or not are_adjacent(u.zone, zone):
+			if u == null or not u.is_alive() or not can_move_between(u.zone, zone):
 				_waste_arrival(si, play)
 				return true
 			if s.line(zone).size() >= config.zone_capacity:
@@ -803,7 +891,7 @@ func _arrive(si: int, play: Dictionary) -> bool:
 			emit_event(RulesEvent.UNIT_MOVED, {"side": side_name(si), "uid": u.uid, "from_zone": zone_name(from), "zone": zone_name(zone)})
 			emit_event(RulesEvent.AGILE_MOVED, {"side": side_name(si), "uid": u.uid, "card_id": u.source_id,
 					"from_zone": zone_name(from), "zone": zone_name(zone), "moved": true})
-			trigger_traps(si, u)
+			arrived.append(u)
 	process_eliminations()
 	return true
 
@@ -928,23 +1016,34 @@ func score() -> void:
 		control.append(c)
 		# kc-clarity: the units each side still has here and its Holders (the round recap's "why").
 		var held: Array = control_counts(z)
+		# kc-feedback: the points this column gives its holder this round (the board pop-up "+1").
+		var pts: int = 0
+		var mr: ModeRules = hooks.mode_rules if hooks != null else null
+		if (c == PLAYER or c == ENEMY) and mr != null and mr.score_source == ModeRules.ScoreSource.CONTROLLED_ZONES:
+			pts = 2 if terrain[z] == TerrainRules.HOT_ZONE else 1
 		emit_event(RulesEvent.ZONE_CONTROL, {"zone": zone_name(z), "owner": control_name(c),
-				"player_units": held[0], "enemy_units": held[1], "player_holder": held[2], "enemy_holder": held[3]})
+				"player_units": held[0], "enemy_units": held[1], "player_holder": held[2], "enemy_holder": held[3],
+				"points": pts})
 	_synergy_heal()  # kc-syn: Undead tier 2, before the END_OF_ROUND effects
 	TerrainRules.field_hospital(self)  # kc-v2-impl
-	for si: int in side_order():
-		var s: RulesSide = sides[si]
-		for z: int in ZONE_COUNT:
-			for entry: Dictionary in s.equipment[z].duplicate():
-				var rc: RulesCard = entry["card"]
-				var ctx: Dictionary = make_ctx(si, SRC_EQUIPMENT, rc.card.id, rc.uid, z, -1, -1)
-				EffectResolver.resolve_triggered(self, rc.card.effects, DataEnums.Trigger.END_OF_ROUND, ctx)
-		for u: RulesUnit in s.units_on_board():
-			var uctx: Dictionary = unit_ctx(u)
-			EffectResolver.resolve_triggered(self, u.effects, DataEnums.Trigger.END_OF_ROUND, uctx)
-		for perk: LoadoutItem in s.setup.perks:
-			var pctx: Dictionary = make_ctx(si, SRC_PERK, perk.id, -1, NO_ZONE, -1, -1)
-			EffectResolver.resolve_triggered(self, perk.effects, DataEnums.Trigger.END_OF_ROUND, pctx)
+	# kc-fair: both sides' End of round effects at once (help, then harm; the dead go after).
+	const EOR: int = DataEnums.Trigger.END_OF_ROUND
+	for harm: bool in [false, true]:
+		for si: int in side_order():
+			var s: RulesSide = sides[si]
+			for z: int in ZONE_COUNT:
+				for entry: Dictionary in s.equipment[z].duplicate():
+					var rc: RulesCard = entry["card"]
+					if effects_harm(_triggered(rc.card.effects, EOR)) == harm:
+						var ctx: Dictionary = make_ctx(si, SRC_EQUIPMENT, rc.card.id, rc.uid, z, -1, -1)
+						EffectResolver.resolve_triggered(self, rc.card.effects, EOR, ctx)
+			for u: RulesUnit in s.units_on_board():
+				if effects_harm(_triggered(u.effects, EOR)) == harm:
+					EffectResolver.resolve_triggered(self, u.effects, EOR, unit_ctx(u))
+			for perk: LoadoutItem in s.setup.perks:
+				if effects_harm(_triggered(perk.effects, EOR)) == harm:
+					var pctx: Dictionary = make_ctx(si, SRC_PERK, perk.id, -1, NO_ZONE, -1, -1)
+					EffectResolver.resolve_triggered(self, perk.effects, EOR, pctx)
 	process_eliminations()
 	_overrun()
 	announce_synergy()
@@ -994,10 +1093,13 @@ func remove_field(si: int, zone: int, entry: Dictionary, reason: StringName) -> 
 			"zone": zone_name(zone), "reason": reason})
 
 
-## Removes every unit at 0 Armor (initiative side first, zone and line order),
-## records eliminations, then resolves On Down / On Eliminate triggers, repeating
-## until nothing else dies.
+## Removes every unit at 0 Armor (both sides together, listed zone and line order), records the
+## eliminations, then resolves On Down / On Eliminate triggers (kc-fair: help before harm, both sides),
+## repeating until nothing else dies. While a simultaneous step runs (_defer_deaths) it waits for the
+## step's end.
 func process_eliminations() -> void:
+	if _defer_deaths > 0:
+		return
 	var guard: int = 0
 	while guard < 64:
 		guard += 1
@@ -1016,15 +1118,22 @@ func process_eliminations() -> void:
 			u.zone = NO_ZONE
 			var rec: Dictionary = _record_elimination(u, zone)
 			follow_ups.append({"unit": u, "zone": zone, "rec": rec})
-		for f: Dictionary in follow_ups:
-			var u: RulesUnit = f["unit"]
-			var ctx: Dictionary = make_ctx(u.side, SRC_ON_DOWN, u.source_id, u.uid, f["zone"], -1, -1)
-			ctx["source_unit"] = u
-			EffectResolver.resolve_triggered(self, u.effects, DataEnums.Trigger.ON_DOWN, ctx)
-			var rec: Dictionary = f["rec"]
-			if rec["credit"] and int(rec["by_uid"]) >= 0:
-				var killer: RulesUnit = _find_unit_anywhere(int(rec["by_uid"]), dead)
-				if killer != null:
+		for harm: bool in [false, true]:
+			for f: Dictionary in follow_ups:
+				var u: RulesUnit = f["unit"]
+				var on_down: Array[EffectData] = _triggered(u.effects, DataEnums.Trigger.ON_DOWN)
+				if not on_down.is_empty() and effects_harm(on_down) == harm:
+					var ctx: Dictionary = make_ctx(u.side, SRC_ON_DOWN, u.source_id, u.uid, f["zone"], -1, -1)
+					ctx["source_unit"] = u
+					EffectResolver.resolve_triggered(self, u.effects, DataEnums.Trigger.ON_DOWN, ctx)
+				var rec: Dictionary = f["rec"]
+				if rec["credit"] and int(rec["by_uid"]) >= 0:
+					var killer: RulesUnit = _find_unit_anywhere(int(rec["by_uid"]), dead)
+					if killer == null:
+						continue
+					var on_elim: Array[EffectData] = _triggered(killer.effects, DataEnums.Trigger.ON_ELIMINATE)
+					if on_elim.is_empty() or effects_harm(on_elim) != harm:
+						continue
 					var kctx: Dictionary = unit_ctx(killer)
 					if killer.zone == NO_ZONE:
 						kctx["zone"] = f["zone"]
@@ -1866,9 +1975,10 @@ func events_since(index: int) -> Array[Dictionary]:
 	return events.slice(index)
 
 
-## [initiative side, other side].
+## kc-fair: the order the two sides are LISTED in (events, loops). It never decides anything: every
+## step that both sides take part in resolves simultaneously (_simultaneous, process_eliminations).
 func side_order() -> Array[int]:
-	return [initiative, 1 - initiative]
+	return [PLAYER, ENEMY]
 
 
 func side_name(side: int) -> StringName:
@@ -1892,9 +2002,15 @@ func is_zone(zone: int) -> bool:
 	return zone >= 0 and zone < ZONE_COUNT
 
 
-## Left-Mid and Mid-Right are adjacent; the flanks are not.
+## Left-Mid and Mid-Right are adjacent; the flanks are not (synergy links, Operator-or-adjacent reach).
 func are_adjacent(a: int, b: int) -> bool:
 	return is_zone(a) and is_zone(b) and absi(a - b) == 1
+
+
+## kc-fair (head: "Movement should allow to go anywhere"): a move (Operator Rotate, Agile, Flank Route,
+## any MOVE_UNIT) may go from column a to ANY other column, the far flank included.
+func can_move_between(a: int, b: int) -> bool:
+	return is_zone(a) and is_zone(b) and a != b
 
 
 ## Effect context: who resolves it, from what, with which player choices.

@@ -91,13 +91,13 @@ func test_strike_order_standing_first_then_reveal_order() -> void:
 	assert_true(m.submit(E, RulesIntent.use_item(&"mortar_barrage", F.RIGHT))["ok"], "enemy mortar")
 	var start: int = m.events.size()
 	m.reveal()
-	var first: StringName = m.side_name(m.initiative)
+	var first: StringName = &"player"  # kc-fair: no initiative; the player's strikes are listed first
 	m.firefight()
 	var strikes: Array = m.events_since(start).filter(func(e: Dictionary) -> bool: return e["type"] == RulesEvent.KILLSTREAK_STRIKE)
 	assert_eq(strikes.size(), 3, "three strikes")
 	assert_eq([strikes[0]["item_id"], strikes[0]["side"], strikes[0]["pass"], strikes[0]["passes"]],
 			[&"attack_helo", &"enemy", 2, 2], "the standing helo (2nd pass) first")
-	assert_eq(strikes[1]["side"], first, "then this round's, initiative side first")
+	assert_eq(strikes[1]["side"], first, "then this round's, the player's listed first")
 	assert_eq(strikes[1]["item_id"], &"mortar_barrage", "a mortar")
 	assert_true(strikes[2]["side"] != first, "then the other side")
 

@@ -8,7 +8,7 @@
 #     mirror   aware mirror, seat 0 win rate on the starter and on end-of-run decks (45-55%), with
 #              how often seat 0 holds initiative and how often initiative was a tie
 #   What-ifs (all in memory, nothing is saved):
-#     tiebreak=player|enemy|alt|other|coin|random   initiative tie rule (ModeRules.tiebreak)
+#     tiebreak=...   retired (kc-fair, 17 Nov 2026: initiative is gone; ignored)
 #     set=card.prop=value[;card.prop=value]          edit CardData (e.g. set=breacher.armor=3)
 #     slot=N.prop=value[;...]                        edit RunMatchData N (1-based)
 #     sdeck=N:card*count,...                         set slot N's authored enemy_deck
@@ -56,7 +56,7 @@ func _main() -> void:
 				exps.clear()
 				for e: String in kv[1].split(","):
 					exps.append(e)
-			"tiebreak": ModeRules.tiebreak = StringName(kv[1])
+			"tiebreak": push_warning("kc-fair: initiative is gone; tiebreak= is ignored")
 			"pfirst": player_first = kv[1] == "1"
 			"mtie": mirror_tie = StringName(kv[1])
 			"set":
@@ -91,14 +91,13 @@ func _main() -> void:
 						(tiers[int(tk[1])] as Dictionary)[tk[2]] = val
 			_: push_error("tune_check: unknown option " + arg)
 	var t0: int = Time.get_ticks_msec()
-	print("tune_check: runs=%d late=%d mirror=%d tn=%d tiebreak=%s args=%s" % [runs, late_n, mirror_n, trait_n,
-			ModeRules.tiebreak, OS.get_cmdline_user_args()])
+	print("tune_check: runs=%d late=%d mirror=%d tn=%d args=%s" % [runs, late_n, mirror_n, trait_n,
+			OS.get_cmdline_user_args()])
 	if "runs" in exps or "traits" in exps or "duel" in exps or "mirror" in exps:
 		for k: int in proxies.size():
 			_runs(proxies[k], k == 0)
 	if mirror_tie != &"":
-		ModeRules.tiebreak = mirror_tie
-		print("late checks use tiebreak=%s" % mirror_tie)
+		print("kc-fair: initiative is gone; mtie=%s is ignored" % mirror_tie)
 	if "traits" in exps:
 		_traits()
 	if "duel" in exps:
@@ -167,7 +166,7 @@ func _play(m: MatchState, a: AiPlayer, b: AiPlayer, track: bool = false) -> void
 			if m.sides[0].score == m.sides[1].score:
 				init_stats[2] += 1
 		m.resolve_round()
-		if track and m.initiative == 0:
+		if track and false:  # kc-fair: initiative is gone (nobody goes first)
 			init_stats[1] += 1
 		m.begin_round()
 

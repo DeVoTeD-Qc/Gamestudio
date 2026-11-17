@@ -16,7 +16,6 @@ extends RefCounted
 const MATCH_STARTED: StringName = &"match_started"
 const ROUND_STARTED: StringName = &"round_started"            ## round
 const PHASE_CHANGED: StringName = &"phase_changed"            ## phase
-const INITIATIVE: StringName = &"initiative"                  ## side
 const ROUND_ENDED: StringName = &"round_ended"                ## player_score, enemy_score
 const MATCH_ENDED: StringName = &"match_ended"                ## result, winner, is_draw, reason, mode, rounds, overtime, player_score, enemy_score, target, player_eliminations, enemy_eliminations (ModeRules outcome)
 const OVERTIME_STARTED: StringName = &"overtime_started"      ## player_score, enemy_score, last_round (round cap ended tied)

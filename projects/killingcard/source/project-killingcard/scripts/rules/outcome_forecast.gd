@@ -14,7 +14,7 @@
 #   is the zone owner at the start of the Score step (the value Zone Control scores).
 #
 #   forecast(state, viewer) -> {
-#     ok: bool (false outside the viewer's open Deploy), initiative: int (side first at Reveal),
+#     ok: bool (false outside the viewer's open Deploy),
 #     zones: [ per zone 0..2: {
 #       dealt: int        damage the other side's units take in this zone (Reveal + Firefight),
 #       taken: int        damage the viewer's units take,
@@ -34,7 +34,7 @@ extends RefCounted
 
 
 static func forecast(state: MatchState, viewer: int = MatchState.PLAYER) -> Dictionary:
-	var out: Dictionary = {"ok": false, "initiative": MatchState.PLAYER, "zones": []}
+	var out: Dictionary = {"ok": false, "zones": []}
 	if state == null or state.phase != MatchState.Phase.DEPLOY or state.sides[viewer].ready:
 		return out
 	var dots: PackedInt32Array = state.red_dots(viewer)
@@ -50,7 +50,6 @@ static func forecast(state: MatchState, viewer: int = MatchState.PLAYER) -> Dict
 		zones[z]["unknown"] = dots[z]
 		zones[z]["revealed"] = state.revealed_red_dots(viewer, z)
 	out["ok"] = true
-	out["initiative"] = sim.initiative
 	out["zones"] = zones
 	return out
 

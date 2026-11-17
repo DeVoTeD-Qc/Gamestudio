@@ -104,8 +104,8 @@ func test_tactic_zone_and_target_codes() -> void:
 	assert_eq(c["data"]["want"], &"friendly", "wants a friendly unit")
 	var mover: RulesUnit = F.place(m, P, F.unit("mover", 1, 9), F.LEFT)
 	_expect(m, RulesIntent.play_card(flank, F.LEFT, mover.uid, F.LEFT), &"same_zone", "move to its own zone")
-	c = _expect(m, RulesIntent.play_card(flank, F.RIGHT, mover.uid, F.RIGHT), &"not_adjacent", "flanks are not adjacent")
-	assert_eq(c["data"]["from_zone"], F.LEFT, "from_zone data")
+	# kc-fair: a move may go to ANY other column, the far flank included.
+	assert_eq(m.can_submit(P, RulesIntent.play_card(flank, F.RIGHT, mover.uid, F.RIGHT))["code"], &"ok", "Left -> Right (any column)")
 	# A move into a full zone is legal (it fizzles at Reveal) but flagged.
 	for i: int in m.config.zone_capacity:
 		F.place(m, P, F.unit("m%d" % i, 1, 1), F.MID)
@@ -177,7 +177,7 @@ func test_operator_codes() -> void:
 	_expect_ok(m, RulesIntent.place_operator(F.LEFT), "place Left")
 	_expect(m, RulesIntent.place_operator(F.MID), &"already_placed", "once per Deploy")
 	_expect(m, RulesIntent.rotate(F.LEFT), &"same_zone", "rotate to where it is")
-	_expect(m, RulesIntent.rotate(F.RIGHT), &"not_adjacent", "Left -> Right")
+	assert_eq(m.can_submit(P, RulesIntent.rotate(F.RIGHT))["code"], &"ok", "Left -> Right (kc-fair: any column)")
 	_expect_ok(m, RulesIntent.rotate(F.MID), "Left -> Mid")
 	var c: Dictionary = _expect(m, RulesIntent.rotate(F.RIGHT), &"no_rotations_left", "one Rotation")
 	assert_eq(c["data"]["allowed"], 1, "allowed data")
@@ -218,7 +218,7 @@ func test_legal_targets_match_submit() -> void:
 			"only the Operator can be moved yet")
 	m.submit(P, RulesIntent.play_card(rifle, F.LEFT))
 	var moves: Array = m.legal_targets(P, flank).filter(func(t: Dictionary) -> bool: return t["target_uid"] == rifle)
-	assert_eq(moves, [{"zone": 1, "target_uid": rifle}], "queued Rifleman can move Left -> Mid only")
+	assert_eq(moves, [{"zone": 1, "target_uid": rifle}, {"zone": 2, "target_uid": rifle}], "queued Rifleman can move Left -> Mid or Right")
 	# Every legal target is accepted by submit().
 	for t: Dictionary in m.legal_targets(P, &"point_strike"):
 		assert_true(m.can_submit(P, RulesIntent.use_item(&"point_strike", t["zone"], t["target_uid"]))["ok"], "legal -> ok %s" % t)

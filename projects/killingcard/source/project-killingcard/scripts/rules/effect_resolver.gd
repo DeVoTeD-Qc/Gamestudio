@@ -103,7 +103,7 @@ static func scope_zones(state, e: EffectData, ctx: Dictionary) -> Array[int]:
 		Z.ALL_ZONES:
 			out.assign([0, 1, 2])
 		_:
-			out.append(-1)  # ANY, ADJACENT_ZONE (destination comes from ctx.dest_zone)
+			out.append(-1)  # ANY, ADJACENT_ZONE (kc-fair: any other column; destination from ctx.dest_zone)
 	return out
 
 
@@ -353,7 +353,7 @@ static func _apply(state, e: EffectData, ctx: Dictionary, z: int, amount: int) -
 
 static func _move(state, e: EffectData, ctx: Dictionary, t: RulesUnit, dest: int) -> void:
 	var own: RulesSide = state.sides[t.side]
-	if not t.is_alive() or not state.are_adjacent(t.zone, dest) or own.line(dest).size() >= state.config.zone_capacity:
+	if not t.is_alive() or not state.can_move_between(t.zone, dest) or own.line(dest).size() >= state.config.zone_capacity:
 		_wasted(state, e, ctx, "can't move there")
 		return
 	var from: int = t.zone

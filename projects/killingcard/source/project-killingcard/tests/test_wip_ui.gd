@@ -1,6 +1,6 @@
 # test_wip_ui.gd
 # Purpose: kc-wip-impl, the Wip mechanics on the match screen: tapping your Agile unit selects its free
-#   move and a tap on an adjacent column queues it (pending in the destination, UNDO names it);
+#   move and a tap on any other column queues it (pending in the destination, UNDO names it);
 #   Premium Loadout plays as soon as you pick your unit (no column step); the log says what a Beam hit
 #   (friends marked), where an Agile unit went, the Hacker's Supply and the +1/+1 buffs.
 # Author: Mechanics Developer Agent (kc-wip-impl)
@@ -24,7 +24,7 @@ func test_agile_tap_select_and_move() -> void:
 	await _frames(2)
 	c._on_lane_tapped(0, &"player", runner.uid)
 	assert_eq(c.selection.get("kind"), &"agile", "a tap on my Agile unit selects its move")
-	assert_eq(c.check_play(2)["ok"], false, "C is not adjacent to A")
+	assert_eq(c.check_play(2)["badge"], "MOVE HERE", "kc-fair: C is in reach too (any column)")
 	assert_eq(c.check_play(1)["badge"], "MOVE HERE", "B: MOVE HERE")
 	var res: Dictionary = c.play_at(1)
 	assert_true(res["ok"], "move queued: %s" % res.get("reason", ""))
