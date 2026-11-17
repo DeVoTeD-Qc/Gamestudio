@@ -218,3 +218,10 @@ func _apply_compact() -> void:
 		_confirm.custom_minimum_size.y = button_height()
 	for t: Button in _tiles:
 		(t as PickTile).min_height = 96.0 if compact else 140.0
+
+
+## kc-ui-pass: rest is explained once (anchored to the three choices).
+func _notice_concepts() -> void:
+	var g: Node = concept_guide()
+	if g != null and _row != null:
+		g.notice(&"rest", _row, [_confirm])

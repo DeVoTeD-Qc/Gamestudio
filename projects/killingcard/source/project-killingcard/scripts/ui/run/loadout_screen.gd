@@ -380,8 +380,21 @@ func open_starter() -> Control:
 	_starter.connect(&"closed", func() -> void:
 		if _starter != null:
 			_starter.queue_free()
-			_starter = null)
+			_starter = null
+		_notice_loadout())
+	# kc-ui-pass: the squad (Operator + starter deck) is explained once, on this panel.
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide != null:
+		guide.notice(&"starter", _starter.get(&"_op_list") if _starter.get(&"_op_list") != null else _starter)
 	return _starter
+
+
+## kc-ui-pass: killstreaks are explained once on this screen (anchored to the first tile).
+func _notice_loadout() -> void:
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide == null or _tiles.is_empty() or _starter != null:
+		return
+	guide.notice(&"loadout", _tiles.values()[0], [_begin_button])
 
 
 func get_starter() -> Control:
@@ -449,6 +462,9 @@ func _slots() -> int:
 
 
 func _refresh() -> void:
+	if _starter == null:
+		# Twice deferred: the STARTING SQUAD panel opens deferred from _build(); its tip comes first.
+		(func() -> void: _notice_loadout.call_deferred()).call_deferred()
 	var slots: int = _slots()
 	for id: StringName in _tiles:
 		var tile: PickTile = _tiles[id]

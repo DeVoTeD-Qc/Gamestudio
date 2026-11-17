@@ -375,3 +375,17 @@ func leave() -> void:
 	if not RunV2Views.override_shop.is_empty():
 		return
 	goto(RunFlow.scene_for(run()))
+
+
+## kc-ui-pass: the shop and REQ, then the cards on sale (their keywords / traits), explained once.
+func _notice_concepts() -> void:
+	var g: Node = concept_guide()
+	if g == null:
+		return
+	g.notice(&"shop", _cards_row, [_done])
+	g.notice(&"requisition", _req_chip, [_done])
+	var cards: Array = shop.get("cards", []) if shop.get("cards") is Array else []
+	for i: int in mini(cards.size(), _cards_row.get_child_count()):
+		var card: CardData = card_by_id(StringName(str((cards[i] as Dictionary).get("card_id", ""))))
+		if card != null:
+			g.notice_all(ConceptRegistry.for_card(card), _cards_row.get_child(i), [_done])

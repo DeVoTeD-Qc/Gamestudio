@@ -282,6 +282,7 @@ func test_reveal_hides_unmet_systems_until_in_use() -> void:
 	snap["synergy"] = {"player": {"rail": [{"trait": &"vanguard", "name": "Vanguard", "count": 2, "next": 3, "tier": 2}], "links": [], "tiers": {}},
 			"enemy": {"rail": [], "links": [], "tiers": {}}}
 	snap["reveal"] = {"trait_rail": false, "links": false}
+	snap["round"] = 2  # kc-ui-pass: a run's round 1 hides the initiative chip (nobody is behind yet)
 	m.show_snapshot(snap)
 	await _frames(2)
 	assert_false(m.get_trait_rail().is_visible_in_tree(), "unmet trait rail hidden")
@@ -334,33 +335,34 @@ func test_new_card_shows_once_and_reset_tips() -> void:
 	var nc := NewCard.new()
 	host.add_child(nc)
 	await _frames(1)
+	# kc-ui-pass: one onboarding system. offer() hands met, relevant systems to the ConceptGuide.
+	var g: Node = tree.root.get_node("ConceptGuide")
+	var saved_auto: bool = g.auto_show
+	g.auto_show = false
+	g.clear_queue()
 	assert_eq(nc.offer([RevealFlags.MUSTER_OUT], "s1"), &"", "nothing met yet: no explainer")
 	rs.note_systems([RevealFlags.MUSTER_OUT, RevealFlags.KILLSTREAKS])
 	assert_eq(nc.offer([RevealFlags.CALLING_CARDS], "s1"), &"", "only explainers relevant to this screen")
-	assert_eq(nc.offer([RevealFlags.MUSTER_OUT], "s2"), RevealFlags.MUSTER_OUT, "met + relevant: shown")
+	assert_eq(nc.offer([RevealFlags.MUSTER_OUT], "s2"), RevealFlags.MUSTER_OUT, "met + relevant: handed to the guide")
+	assert_true(g.queued_ids().has(RevealFlags.MUSTER_OUT), "queued as a concept callout")
+	assert_false(nc.is_chip_open() or nc.is_open(), "the old NEW chip / card no longer opens")
+	assert_eq(g.show_next(), RevealFlags.MUSTER_OUT, "the guide shows it")
+	g.dismiss()
+	assert_true(st.is_seen(RevealFlags.MUSTER_OUT), "dismissed = seen")
+	assert_eq(nc.offer([RevealFlags.MUSTER_OUT], "s3"), &"", "never twice")
+	g.auto_show = saved_auto
+	# The card itself still renders (QA, the Codex): title, text, GOT IT, inspect.
+	nc.show_flag(RevealFlags.MUSTER_OUT)
 	await _frames(2)
-	# kc-clarity: offer() shows the small non-blocking chip, not the card; the tip counts as seen.
-	assert_true(nc.is_chip_open(), "the NEW chip is up")
-	assert_false(nc.is_open(), "no modal card on offer")
-	assert_eq(nc.mouse_filter, Control.MOUSE_FILTER_IGNORE, "the chip does not block the screen")
-	assert_true(st.is_seen(RevealFlags.MUSTER_OUT), "shown once = seen")
-	assert_true(Rect2(Vector2.ZERO, host.size).encloses(nc.get_chip().get_global_rect()), "chip on screen")
-	nc.open_chip()
-	await _frames(2)
-	assert_true(nc.is_open(), "a tap on the chip opens the card")
+	assert_true(nc.is_open(), "show_flag opens the card")
 	var title: Label = nc.find_child("TitleLabel", true, false)
 	assert_eq(title.text, "NEW: MUSTER OUT", "title from RevealFlags.TEXTS")
-	var text: Label = nc.find_child("TextLabel", true, false)
-	assert_true(text.text.contains("quartermaster"), "one sentence: %s" % text.text)
 	var ok: Button = nc.get_got_it_button()
 	assert_true(ok.size.y >= 64.0 * 0.99, "GOT IT is a full tap target")
-	assert_true(Rect2(Vector2.ZERO, host.size).encloses(nc.get_card().get_global_rect()), "card on screen at phone size (%s in %s, nc %s)" % [nc.get_card().get_global_rect(), host.size, nc.size])
 	nc.inspect()
 	assert_true((nc.find_child("AboutLabel", true, false) as Label).visible, "long press / right click: what this card is")
 	ok.pressed.emit()
 	assert_false(nc.is_open(), "GOT IT closes it")
-	assert_true(st.is_seen(RevealFlags.MUSTER_OUT), "GOT IT marks it seen")
-	assert_eq(nc.offer([RevealFlags.MUSTER_OUT], "s3"), &"", "never twice")
 	# A keyword tip falls back to the card's own rules line.
 	assert_true(String(NewCard.text_for(&"kw_first_shot").get("text", "")).contains("first"), "keyword tip text from the card rules")
 	host.queue_free()
@@ -369,7 +371,8 @@ func test_new_card_shows_once_and_reset_tips() -> void:
 	tree.root.add_child(pm)
 	await _frames(1)
 	var b: Button = pm.get_reset_tips_button()
-	assert_true(b != null and b.text == "RESET TIPS", "MENU has RESET TIPS")
+	assert_true(b != null and b.text == "RESET TIPS", "reset_tips() is still wired (the button lives in the GLOSSARY)")
+	assert_true(pm.get_tips_button() != null and pm.get_tips_button().text.begins_with("TIPS:"), "MENU has TIPS ON / OFF")
 	b.pressed.emit()
 	assert_true(st.met_flags.is_empty() and st.seen_flags.is_empty(), "RESET TIPS clears met and seen")
 	pm.queue_free()

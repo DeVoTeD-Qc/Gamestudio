@@ -275,7 +275,22 @@ func show_offer() -> void:
 func _after_build(key: String) -> void:
 	_announce()
 	var r: RunProgress = run()
+	# kc-ui-pass: the drop, then each offered card's type / keywords / trait, explained once each
+	# (anchored to the card that shows it), then the systems this offer brings (NewCard -> guide).
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide != null and not offer.is_empty():
+		var kind: StringName = offer.get("kind", &"")
+		if kind in RewardOffers.CARD_DROPS and not tiles.is_empty():
+			guide.notice(&"supply_drop", _options, [_skip_button])
+		if r != null and offer.get("options") is Array:
+			var opts: Array = offer["options"]
+			for i: int in mini(opts.size(), tiles.size()):
+				var res: Resource = r.resource(StringName(opts[i]))
+				if res is CardData:
+					guide.notice_all(ConceptRegistry.for_card(res as CardData), tiles[i], [_skip_button])
 	if new_card != null and r != null:
+		if not tiles.is_empty():
+			new_card.chip_anchor = _options.get_global_rect()
 		new_card.offer(RevealFlags.run_triggers(r), key)
 
 
@@ -827,7 +842,7 @@ func _card_tile(card: CardData, art: StringName = &"") -> PickTile:
 	# the keyword's rule ("Flank: Shoots the back-most enemy."), else the card's text.
 	var rules: String = CardInfo.rule_line(card).replace("\n", " ")
 	if rules == "":
-		rules = "No ability: %d FP, %d Armor." % [card.firepower, card.armor] if card.is_unit() else CardInfo.type_line(card)
+		rules = "%d FP, %d Armor." % [card.firepower, card.armor] if card.is_unit() else CardInfo.type_line(card)
 	var label: Label = tile.add_line(rules)
 	label.name = "RulesLabel"
 	label.set_meta(&"full_text", rules)

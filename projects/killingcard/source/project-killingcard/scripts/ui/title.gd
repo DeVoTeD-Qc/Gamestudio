@@ -20,6 +20,8 @@
 extends "res://scripts/ui/run/run_screen.gd"
 
 const TutorialProgress: GDScript = preload("res://scripts/ui/tutorial/tutorial_progress.gd")
+## kc-ui-pass: the first-launch "Play the 3-minute drill" panel is off (see refresh()).
+const OFFER_DRILL: bool = false
 const SCENE_TUTORIAL: String = "res://scenes/tutorial/Tutorial.tscn"
 const CodexView: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
 var _codex_button: Button = null
@@ -319,7 +321,9 @@ func refresh() -> void:
 	_continue_button.visible = rs != null and rs.has_save()
 	_confirm_panel.hide()
 	_show_warning(rs.last_load_warning if rs != null else "")
-	_offer_panel.visible = TutorialProgress.should_offer() and not (rs != null and rs.has_save())
+	# kc-ui-pass: no first-launch drill offer. A first run teaches itself (the ConceptGuide explains each
+	# thing the first time it is on screen); the drill stays one tap away (TUTORIAL) for who wants it.
+	_offer_panel.visible = OFFER_DRILL and TutorialProgress.should_offer() and not (rs != null and rs.has_save())
 	_apply_primary()
 	if _offer_panel.visible:
 		_play_drill_button.grab_focus.call_deferred()
@@ -425,7 +429,7 @@ func _sync_offer_reserve() -> void:
 		return
 	var others: bool = _offer_panel.visible or _continue_button.visible or _warning_panel.visible or _confirm_panel.visible
 	var h: float = 0.0
-	if not others:
+	if not others and OFFER_DRILL:
 		h = _offer_panel.get_combined_minimum_size().y
 	_offer_reserve.custom_minimum_size.y = h
 	_offer_reserve.visible = h > 0.0

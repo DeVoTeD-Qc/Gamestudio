@@ -357,6 +357,7 @@ func _play(m: MatchState, squad: SquadData) -> void:
 	if duel == null:
 		_assign_copy_arts(state)  # kc-duel-ui: a duel deck's copies already wear their picked arts
 	state.start_match()
+	_hold_concepts()
 	_begin_deploy()
 
 
@@ -662,32 +663,109 @@ func _begin_deploy() -> void:
 		open_mulligan()
 		return
 	_deploy_hint()
-	_rail_pointer()
 	if _screen.has_method(&"offer_explainer") and not _is_tutorial():
 		_screen.offer_explainer(met_now, "round%d" % state.round_number)
 
 
-## kc-r2-fixes (playtest r2: "the left rail means nothing until a streak turns READY"): once per
-## profile, at the start of round 2, one line says what the killstreak tiles count.
+## kc-ui-pass: the killstreak sockets are explained once by the ConceptGuide ("killstreak", from
+## round 2); the old one-time "Left rail: ..." toast is gone. Kept as a flag name for old profiles.
 const RAIL_POINTER_FLAG: StringName = &"ks_rail_pointer"
 
 
-func _rail_pointer() -> bool:
-	var st: Node = get_node_or_null(^"/root/Settings")
-	# Not in headless test runs (Settings not persisting): the tests' toasts stay as they were.
-	if st == null or not bool(st.get(&"persist")) or _is_tutorial() or state.round_number < 2 \
-			or bool(st.call(&"is_seen", RAIL_POINTER_FLAG)):
-		return false
+# --- kc-ui-pass: concept callouts ("explain once, the first time you see it") -------------------
+
+## The ConceptGuide waits while any of this is on screen: a round playing, the recap, a sheet, the
+## inspector, the pause menu, the end banner, the match intro, a flyout. The drill (tutorial) teaches
+## with its own coach and holds the guide for the whole match.
+func _hold_concepts() -> void:
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide == null:
+		return
+	guide.add_hold_check(self, func() -> bool:
+		if state == null or _screen == null or _is_tutorial() or _busy or _finished:
+			return true
+		if state.phase != MatchState.Phase.DEPLOY or is_pause_menu_open() or is_end_banner_open():
+			return true
+		# While the mulligan is up only its own tip may open (the rest point under the panel).
+		if is_mulligan_open():
+			return guide.peek_id() != &"mulligan"
+		if _screen.get_inspector().is_open():
+			return true
+		var recap: Variant = _screen.call(&"get_round_recap") if _screen.has_method(&"get_round_recap") else null
+		if recap is Control and (recap as Control).has_method(&"is_open") and bool((recap as Control).call(&"is_open")):
+			return true
+		var intro: Variant = _screen.call(&"get_match_intro") if _screen.has_method(&"get_match_intro") else null
+		if intro is Control and (intro as Control).is_visible_in_tree():
+			return true
+		return _screen.has_method(&"is_flyout_open") and bool(_screen.call(&"is_flyout_open")))
+
+
+## Tells the ConceptGuide what the player can see in this Deploy, each with its anchor, in the
+## order a newcomer should hear about it. Already explained concepts are ignored by the guide.
+func notice_concepts(snap: Dictionary = {}) -> void:
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide == null or state == null or _screen == null or _is_tutorial() or state.phase != MatchState.Phase.DEPLOY:
+		return
 	var me: RulesSide = state.sides[me_side]
-	var parts: PackedStringArray = []
-	for item: LoadoutItem in me.setup.killstreaks:
-		if item != null:
-			parts.append("%s at %d" % [item.display_name, StreakTracker.threshold_for(state, me_side, item)])
-	if parts.is_empty():
-		return false
-	st.call(&"mark_seen", RAIL_POINTER_FLAG)
-	_screen.show_toast("Left rail: your killstreaks fill with your streak (eliminations in a row): %s." % ", ".join(parts), 6.0)
-	return true
+	var keys: Dictionary = _screen.get_key_controls()
+	var ready_btn: Control = _screen.get_ready_button()
+	var avoid: Array = [ready_btn]
+	if is_mulligan_open():
+		guide.notice(&"mulligan", _mulligan_panel().get_keep_button(), [], true)
+	guide.notice(&"goal", keys.get("score_bar"), avoid)
+	var hand: Control = _screen.get_hand()
+	var op_card: Control = hand.get_operator_card() if hand.has_method(&"get_operator_card") else null
+	if me.operator_can_deploy and op_card != null:
+		guide.notice(&"operator", op_card, avoid)
+	guide.notice(&"supply", keys.get("supply"), avoid)
+	guide.notice(&"hand", hand, avoid)
+	if not me.plays.is_empty():
+		guide.notice(&"ready", ready_btn)
+	if state.round_number >= 2:
+		guide.notice(&"firefight", _screen.get_board(), avoid)
+		guide.notice(&"streak", keys.get("streak"), avoid)
+		guide.notice(&"killstreak", keys.get("killstreaks"), avoid)
+		if keys.has("initiative"):
+			guide.notice(&"initiative", keys["initiative"], avoid)
+	var ability: Variant = _screen.call(&"get_ability_button") if _screen.has_method(&"get_ability_button") else null
+	if ability is Control and (ability as Control).is_visible_in_tree():
+		guide.notice(&"operator_ability", ability, avoid)
+	# The hand's cards: their type, keywords, trait.
+	for rc: RulesCard in me.hand:
+		var ids: Array[StringName] = ConceptRegistry.for_card(rc.card)
+		if not ids.is_empty():
+			guide.notice_all(ids, hand.get_card(rc.uid) if hand.has_method(&"get_card") else hand, avoid)
+	# The board: units of both sides (stats, keywords, damage), columns, incoming, terrain.
+	var fx: Control = _fx()
+	var loc: Variant = fx.get(&"locator") if fx != null else null
+	var lanes: Array = snap.get("lanes", [])
+	for si: int in [foe_side, me_side]:
+		for u: RulesUnit in state.sides[si].units_on_board():
+			var slot: Control = loc.find_slot(u.uid) if loc != null else null
+			if slot == null:
+				continue
+			guide.notice(&"stats", slot, avoid)
+			guide.notice_all(ConceptRegistry.for_unit(u), slot, avoid)
+			if u.armor < u.max_armor(state.round_number):
+				guide.notice(&"damaged", slot, avoid)
+	var board: Control = _screen.get_board()
+	for z: int in lanes.size():
+		var lane: Dictionary = lanes[z]
+		var lane_node: Node = board.get_lane(MapData.ZONE_IDS[z]) if board.has_method(&"get_lane") else null
+		var tile: Control = lane_node.get_objective_tile() if lane_node != null and lane_node.has_method(&"get_objective_tile") else null
+		if int(lane.get("incoming", 0)) > 0 and lane_node is Control:
+			guide.notice(&"incoming", (lane_node as Control).get_global_rect().intersection(
+					Rect2((lane_node as Control).get_global_position(), Vector2((lane_node as Control).size.x, (lane_node as Control).size.y * 0.5))), avoid)
+		if StringName(String(lane.get("control", ""))) in [&"player", &"enemy"] and tile != null:
+			guide.notice(&"control", tile, avoid)
+		var terr: Dictionary = lane.get("terrain", {})
+		if not terr.is_empty() and tile != null:
+			guide.notice(StringName("terrain_" + String(terr.get("id", ""))), tile, avoid)
+	var pv: Control = _screen.get_preview_button()
+	if pv != null and pv.is_visible_in_tree() and state.round_number >= 2:
+		guide.notice(&"preview", pv, avoid)
+	if keys.has("traits") and (keys["traits"] as Control).is_visible_in_tree():
+		guide.notice(&"trait_rail", keys["traits"], avoid)
 
 
 func _reveal_off() -> void:
@@ -747,6 +825,7 @@ func refresh() -> void:
 	var snap: Dictionary = MatchSnapshot.build(state, map, me_side, killfeed)
 	_screen.show_snapshot(snap)
 	_show_selection()
+	notice_concepts(snap)
 	# kc-ks-seq: the INCOMING markers of strikes still waiting for a fight (the playback moves them
 	# itself while it runs).
 	var fx: Control = _fx()
@@ -1058,6 +1137,7 @@ func open_mulligan() -> void:
 				"type": {DataEnums.CardType.UNIT: "UNIT", DataEnums.CardType.TACTIC: "TACTIC"}.get(rc.card.card_type, "EQUIP")})
 	clear_selection()
 	_mulligan_panel().open(entries)
+	notice_concepts()
 	if EventBus != null and emit_to_event_bus:
 		EventBus.screen_shown.emit(&"mulligan")
 

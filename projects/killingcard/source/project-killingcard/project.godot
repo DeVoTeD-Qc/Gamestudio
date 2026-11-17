@@ -22,6 +22,7 @@ RunState="*res://autoload/run_state.gd"
 DuelState="*res://autoload/duel_state.gd"
 PlaytestLog="*res://autoload/playtest_log.gd"
 SceneRouter="*res://autoload/scene_router.gd"
+ConceptGuide="*res://autoload/concept_guide.gd"
 
 [display]
 

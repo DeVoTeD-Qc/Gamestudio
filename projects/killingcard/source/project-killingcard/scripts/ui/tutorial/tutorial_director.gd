@@ -117,6 +117,11 @@ func _go_to(i: int) -> void:
 		StreakTracker.grant(state, MatchState.PLAYER, st.grant_killstreak)
 		controller.refresh()
 	emitted_steps.append(st.index)
+	# kc-ui-pass: the drill is a guided tour of concepts; what a step teaches counts as explained.
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide != null:
+		for cid: StringName in st.concepts:
+			guide.mark_seen(cid)
 	if EventBus != null:
 		EventBus.tutorial_step.emit(st.index)
 	_coach.show_step(st.title, _text_for(st), st.index, tutorial.steps.size(), st.advance_on == &"next")

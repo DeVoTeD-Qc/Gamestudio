@@ -56,6 +56,7 @@ zone = 1
 [sub_resource type="Resource" id="Resource_ax6i0"]
 script = ExtResource("15_qx8xj")
 index = 1
+concepts = Array[StringName]([&"goal"])
 round_number = 1
 title = "TRAINING DRILL"
 text = "Four rounds against a bot. Plan in secret, then both sides fight."
@@ -70,6 +71,7 @@ grant_killstreak = &""
 [sub_resource type="Resource" id="Resource_55k1i"]
 script = ExtResource("15_qx8xj")
 index = 2
+concepts = Array[StringName]([&"operator"])
 round_number = 1
 title = "YOUR OPERATOR"
 text = "Your Operator is free in round 1. Tap it, then column A."
@@ -84,6 +86,7 @@ grant_killstreak = &""
 [sub_resource type="Resource" id="Resource_qiyll"]
 script = ExtResource("15_qx8xj")
 index = 3
+concepts = Array[StringName]([&"incoming"])
 round_number = 1
 title = "INCOMING"
 text = "INCOMING shows where the enemy deployed, not what. One unit is heading to A."
@@ -98,6 +101,7 @@ grant_killstreak = &""
 [sub_resource type="Resource" id="Resource_4nlpg"]
 script = ExtResource("15_qx8xj")
 index = 4
+concepts = Array[StringName]([&"hand", &"supply"])
 round_number = 1
 title = "DEPLOY"
 text = "Tap Private I, then column A. It costs 1 Supply. Each round gives 1 more."
@@ -112,6 +116,7 @@ grant_killstreak = &""
 [sub_resource type="Resource" id="Resource_fk3um"]
 script = ExtResource("15_qx8xj")
 index = 5
+concepts = Array[StringName]([&"ready"])
 round_number = 1
 title = "READY"
 text = "Tap READY. Both plans flip, then the columns fight."
@@ -126,6 +131,7 @@ grant_killstreak = &""
 [sub_resource type="Resource" id="Resource_nwhuq"]
 script = ExtResource("15_qx8xj")
 index = 6
+concepts = Array[StringName]([&"firefight", &"stats"])
 round_number = 1
 title = "FIREFIGHT"
 text = "Front cards trade shots. Tap to speed up."
@@ -140,6 +146,7 @@ grant_killstreak = &""
 [sub_resource type="Resource" id="Resource_04jdi"]
 script = ExtResource("15_qx8xj")
 index = 7
+concepts = Array[StringName]([&"streak"])
 round_number = 1
 title = "STREAK"
 text = "Elimination: streak 1. At 2 you earn the Recon Drone."
@@ -182,6 +189,7 @@ grant_killstreak = &""
 [sub_resource type="Resource" id="Resource_u6i1l"]
 script = ExtResource("15_qx8xj")
 index = 10
+concepts = Array[StringName]([&"control"])
 round_number = 2
 title = "FIREFIGHT"
 text = "When a front card falls, the one behind steps up. Private II wins C."
@@ -196,6 +204,7 @@ grant_killstreak = &""
 [sub_resource type="Resource" id="Resource_8flmk"]
 script = ExtResource("15_qx8xj")
 index = 11
+concepts = Array[StringName]([&"killstreak"])
 round_number = 2
 title = "KILLSTREAK"
 text = "Streak 2: Recon Drone earned. Killstreaks are free."
@@ -210,6 +219,7 @@ grant_killstreak = &"recon_drone"
 [sub_resource type="Resource" id="Resource_8xobc"]
 script = ExtResource("15_qx8xj")
 index = 12
+concepts = Array[StringName]([&"killstreak"])
 round_number = 3
 title = "CALL IN"
 text = "Tap Recon Drone to call it in. Next round you see what is incoming."

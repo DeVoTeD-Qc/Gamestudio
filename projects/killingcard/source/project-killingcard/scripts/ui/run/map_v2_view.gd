@@ -40,6 +40,11 @@ var _boss_plate: PanelContainer = null
 var _graph_scroll: ScrollContainer = null
 
 
+## kc-ui-pass: map stop type -> its ConceptRegistry concept.
+const NODE_CONCEPTS: Dictionary = {&"fight": &"node_fight", &"elite": &"elite_fight", &"event": &"event",
+		&"shop": &"shop", &"rest": &"rest", &"boss": &"boss_rule"}
+
+
 func _init() -> void:
 	name = "MapV2"
 	add_theme_constant_override(&"separation", 12)
@@ -116,7 +121,13 @@ func setup(p_map: Dictionary, p_portrait: bool, p_compact: bool) -> void:
 	for n: Dictionary in map.get("nodes", []):
 		if bool(n.get("reachable", false)) and first == "":
 			first = String(n["id"])
+	# kc-ui-pass: the map, the boss and the tickets are explained once, before the first stop.
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide") if is_inside_tree() else null
+	if guide != null:
+		guide.notice(&"run_map", graph, [_go])
 	select(first if selected_id == "" or RunV2Views.node_by_id(map, selected_id).is_empty() else selected_id)
+	if guide != null:
+		guide.notice(&"boss_rule", _boss_plate, [_go])
 
 
 ## Portrait: scrolls the map so the step you stand on sits near the bottom (the next steps above it).
@@ -159,7 +170,14 @@ func select(id: String) -> void:
 	selected_id = id
 	if graph != null:
 		graph.set_selected(id)
-	_fill_brief(RunV2Views.node_by_id(map, id))
+	var n: Dictionary = RunV2Views.node_by_id(map, id)
+	_fill_brief(n)
+	# kc-ui-pass: a kind of stop is explained the first time one is selected (anchored to that stop).
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide") if is_inside_tree() else null
+	if guide != null and not n.is_empty():
+		var cid: StringName = NODE_CONCEPTS.get(StringName(n.get("type", &"")), &"")
+		if cid != &"":
+			guide.notice(cid, graph.get_map_node(id) if graph != null else null, [_go])
 
 
 func _fill_brief(n: Dictionary) -> void:

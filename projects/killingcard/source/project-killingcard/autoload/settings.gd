@@ -54,6 +54,9 @@ var found_arts: Dictionary = {}
 ## and the "New: X" explainers they have dismissed. Per profile, never per run; "Reset tips" clears both.
 var met_flags: Dictionary = {}
 var seen_flags: Dictionary = {}
+## kc-ui-pass: Settings "Tips": the ConceptGuide's "explain once" callouts (seen_flags is their seen
+## set: a concept explained once is in it for good, until RESET TIPS).
+var tips_enabled: bool = true
 ## kc-ui4: the Operator (primary weapon id) picked on the starter screen; "" = the run's default.
 ## New runs and the quick match start with it.
 var operator_primary: String = ""
@@ -72,7 +75,7 @@ const SAVE_PATH: String = "user://settings.cfg"
 const SECTION: String = "options"
 ## Options kept between sessions (kc-ui3: the head asked for mirror and SPEED x2).
 const PERSISTED_KEYS: Array[StringName] = [&"mirror_layout", &"speed_x2", &"speed_chosen", &"fast_fights", &"fast_animations",
-		&"equipped_arts", &"operator_primary", &"found_arts", &"met_flags", &"seen_flags",
+		&"equipped_arts", &"operator_primary", &"found_arts", &"met_flags", &"seen_flags", &"tips_enabled",
 		&"show_all_card_info", &"master_volume", &"sfx_volume", &"screen_shake", &"reduced_motion", &"motion_chosen",
 		&"run_profile"]
 ## Save on set_value() (true once the startup load ran; off in headless tests).
@@ -194,6 +197,7 @@ func is_seen(flag: StringName) -> bool:
 func reset_tips() -> void:
 	met_flags = {}
 	set_value(&"seen_flags", {})
+	set_value(&"tips_enabled", true)
 	set_value(&"met_flags", {})
 
 

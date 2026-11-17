@@ -17,8 +17,8 @@ signal closed
 const CardInfo: GDScript = preload("res://scripts/ui/card_info.gd")
 const SynergyGlyphs: GDScript = preload("res://scripts/ui/synergy_glyphs.gd")
 const THEME: Theme = preload("res://assets/ui/hud_theme.tres")
-const CATEGORIES: Array[StringName] = [&"all", &"keyword", &"synergy", &"stats"]
-const CATEGORY_WORDS: Dictionary = {&"all": "ALL", &"keyword": "KEYWORDS", &"synergy": "SYNERGY", &"stats": "STATS & BOARD"}
+const CATEGORIES: Array[StringName] = [&"all", &"basics", &"keyword", &"synergy", &"stats"]
+const CATEGORY_WORDS: Dictionary = {&"all": "ALL", &"basics": "BASICS", &"keyword": "KEYWORDS", &"synergy": "SYNERGY", &"stats": "STATS & BOARD"}
 const ROW_H: float = 64.0
 const ICON: float = 44.0
 ## Drawn glyphs for entries without a sheet icon (id -> kind).
@@ -42,6 +42,8 @@ var _list: VBoxContainer = null
 var _scroll: ScrollContainer = null
 var _search: LineEdit = null
 var _back: Button = null
+var _tips: Button = null
+var _reset_tips: Button = null
 var _chips: Dictionary = {}
 var _rows: Dictionary = {}   # key -> row Control
 
@@ -61,6 +63,18 @@ static func open_over(parent: Control, focus: StringName = &"") -> Control:
 ## trait?, kw?}. Order: card keywords, synergy (keywords, traits, the rest), stats.
 static func entries() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
+	# kc-ui-pass: BASICS = every core concept of ConceptRegistry (the match, the run, Terrain), the
+	# same words as the "explain once" callouts. Not yet explained ones say NEW.
+	var guide: Node = _guide()
+	for g: StringName in [ConceptRegistry.GROUP_MATCH, ConceptRegistry.GROUP_RUN, ConceptRegistry.GROUP_TERRAIN]:
+		for cid: StringName in ConceptRegistry.ids_in(g):
+			var c: Dictionary = ConceptRegistry.get_concept(cid)
+			var nm: String = String(c["title"])
+			if guide != null and not bool(guide.call(&"is_seen", cid)):
+				nm += "  · NEW"
+			var e: Dictionary = _entry(StringName("concept_" + String(cid)), &"basics", nm, String(c["text"]))
+			e["concept"] = cid
+			out.append(e)
 	for id: StringName in CardInfo.KEYWORD_RULES:
 		var row: Array = CardInfo.KEYWORD_RULES[id]
 		var nm: String = String(row[0]).replace(" %d", " N").replace("%d", "N")
@@ -83,6 +97,11 @@ static func entries() -> Array[Dictionary]:
 			continue
 		out.append(_entry(k, &"stats", CardInfo.GLOSSARY_EXTRA[k][0], CardInfo.GLOSSARY_EXTRA[k][1]))
 	return out
+
+
+static func _guide() -> Node:
+	var loop: MainLoop = Engine.get_main_loop()
+	return (loop as SceneTree).root.get_node_or_null(^"ConceptGuide") if loop is SceneTree else null
 
 
 static func _entry(key: StringName, cat: StringName, nm: String, tx: String) -> Dictionary:
@@ -119,6 +138,14 @@ func open(focus: StringName = &"") -> void:
 func close() -> void:
 	hide()
 	closed.emit()
+
+
+func get_tips_button() -> Button:
+	return _tips
+
+
+func get_reset_tips_button() -> Button:
+	return _reset_tips
 
 
 func get_back_button() -> Button:
@@ -256,6 +283,33 @@ func _build() -> void:
 		b.pressed.connect(set_category.bind(k))
 		_chips[k] = b
 		chips.add_child(b)
+	# kc-ui-pass: the "explain once" tips: on / off and reset (also TIPS in the match MENU).
+	_tips = _button("", &"HudButton")
+	_tips.name = "TipsToggle"
+	_tips.toggle_mode = true
+	_tips.custom_minimum_size.x = 140
+	var g0: Node = _guide()
+	_tips.button_pressed = g0 == null or bool(g0.call(&"tips_enabled"))
+	_tips.text = "TIPS: %s" % ("ON" if _tips.button_pressed else "OFF")
+	_tips.toggled.connect(func(on: bool) -> void:
+		var g1: Node = _guide()
+		if g1 != null:
+			g1.call(&"set_tips_enabled", on)
+		_tips.text = "TIPS: %s" % ("ON" if on else "OFF"))
+	chips.add_child(_tips)
+	_reset_tips = _button("RESET TIPS", &"HudButton")
+	_reset_tips.name = "ResetTips"
+	_reset_tips.custom_minimum_size.x = 150
+	_reset_tips.tooltip_text = "Explain every concept again, the next time you see it"
+	_reset_tips.pressed.connect(func() -> void:
+		var g2: Node = _guide()
+		if g2 != null:
+			g2.call(&"reset")
+		_tips.set_pressed_no_signal(true)
+		_tips.text = "TIPS: ON"
+		_reset_tips.text = "TIPS RESET"
+		refresh())
+	chips.add_child(_reset_tips)
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

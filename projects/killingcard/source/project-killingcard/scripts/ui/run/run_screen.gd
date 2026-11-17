@@ -52,6 +52,7 @@ func _ready() -> void:
 	tree_exiting.connect(func() -> void: RevealGate.active = false)
 	_add_backdrop()
 	_build()
+	_notice_concepts.call_deferred()
 	resized.connect(_on_resized)
 	get_viewport().size_changed.connect(_apply_safe_area)
 	_on_resized()
@@ -64,6 +65,16 @@ func _ready() -> void:
 ## Builds the screen from the run (called once from _ready).
 func _build() -> void:
 	pass
+
+
+## kc-ui-pass: tells the ConceptGuide what this screen shows a newcomer (subclasses; once built).
+func _notice_concepts() -> void:
+	pass
+
+
+## The ConceptGuide autoload (null in tools / without the autoload).
+func concept_guide() -> Node:
+	return get_node_or_null(^"/root/ConceptGuide") if is_inside_tree() else null
 
 
 ## Re-applies sizes for the current profile (compact or not).

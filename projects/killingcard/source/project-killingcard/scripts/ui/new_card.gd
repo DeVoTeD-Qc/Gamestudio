@@ -160,23 +160,26 @@ func _gui_input(event: InputEvent) -> void:
 
 ## Shows the first pending explainer whose flag is in `relevant` (RunState.pending_explainers order),
 ## once per `screen_key`. Returns the flag shown (&"" = none). No-op while one is open.
+## kc-ui-pass: one onboarding system. The systems this screen brings that the player has met and not
+## been told about are handed to the ConceptGuide (an "explain once" callout anchored to
+## `chip_anchor`, or centred); this card no longer opens on its own. Returns the first id handed over.
 func offer(relevant: Array, screen_key: String = "") -> StringName:
-	if not auto_show or visible or (screen_key != "" and screen_key == _shown_for):
+	if screen_key != "" and screen_key == _shown_for:
 		return &""
 	var rs: Node = _run_state()
-	if rs == null:
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide") if is_inside_tree() else null
+	if rs == null or guide == null:
 		return &""
+	var first: StringName = &""
 	for f: StringName in rs.pending_explainers():
 		# kc-pos-cut: units no longer link; the "New: Links" card is never offered.
 		if f == RevealFlags.LINKS:
 			continue
-		if f in relevant and not RevealFlags.text_of(f).is_empty():
-			if chips_left <= 0 or _chip.visible:
-				return &""
+		if f in relevant and ConceptRegistry.has(f) and guide.notice(f, chip_anchor if chip_anchor.size != Vector2.ZERO else null):
 			_shown_for = screen_key
-			show_chip(f)
-			return f
-	return &""
+			if first == &"":
+				first = f
+	return first
 
 
 ## kc-clarity: the small "NEW · X" chip (not modal). The tip counts as seen once it is shown; a tap

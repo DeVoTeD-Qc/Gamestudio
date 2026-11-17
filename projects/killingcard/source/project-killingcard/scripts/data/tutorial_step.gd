@@ -46,6 +46,9 @@ const MAX_TITLE: int = 16
 @export var item_id: StringName = &""
 ## Only the advancing action works (taps elsewhere are blocked, other plays refused).
 @export var lock_input: bool = false
+## kc-ui-pass: the concepts (ConceptRegistry ids) this step teaches. When the step starts they count
+## as explained, so the run's "explain once" callouts never repeat what the drill already said.
+@export var concepts: Array[StringName] = []
 ## Forced earn: put this killstreak in the player's Streak Tray when the step starts, if it is
 ## not there yet (the scripted firefight normally earns it already).
 @export var grant_killstreak: StringName = &""

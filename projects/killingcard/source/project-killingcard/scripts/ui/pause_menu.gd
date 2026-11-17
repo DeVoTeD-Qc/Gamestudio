@@ -28,6 +28,7 @@ const CodexView: GDScript = preload("res://scripts/ui/codex/codex_view.gd")
 var _codex_button: Button = null
 var _codex: Control = null
 var _glossary_button: Button = null
+var _tips_button: Button = null
 var _reset_tips_button: Button = null
 var _glossary: Control = null
 ## kc-cards-impl: Settings > Cards > "Always show all card info" (beside FAST ANIMATIONS).
@@ -118,6 +119,24 @@ func _ready() -> void:
 	_reset_tips_button.focus_mode = Control.FOCUS_ALL
 	_reset_tips_button.add_to_group(&"tap_target")
 	_reset_tips_button.pressed.connect(reset_tips)
+	# kc-ui-pass: TIPS ON / OFF (the ConceptGuide's "explain once" callouts) before RESET TIPS.
+	_tips_button = Button.new()
+	_tips_button.name = "TipsButton"
+	_tips_button.toggle_mode = true
+	_tips_button.theme_type_variation = &"HudButton"
+	_tips_button.tooltip_text = "Explain each new thing the first time you see it"
+	_tips_button.custom_minimum_size = Vector2(150, 64)
+	_tips_button.focus_mode = Control.FOCUS_ALL
+	_tips_button.add_to_group(&"tap_target")
+	var st0: Node = get_node_or_null(^"/root/Settings")
+	_tips_button.button_pressed = st0 == null or bool(st0.get(&"tips_enabled"))
+	_tips_button.toggled.connect(_on_tips_toggled)
+	row2.add_child(_tips_button)
+	_update_tips_text()
+	# RESET TIPS lives in the Codex GLOSSARY's concept list now (the phone sheet has no room for both);
+	# the button stays built (hidden) for reset_tips() callers.
+	_reset_tips_button.text = "RESET TIPS"
+	_reset_tips_button.visible = false
 	row2.add_child(_reset_tips_button)
 	# kc-juice: SOUND · MOTION beside RESET TIPS (the phone sheet has no room for another row).
 	_sound_button = Button.new()
@@ -155,12 +174,36 @@ func _ready() -> void:
 	_update_card_info_text()
 
 
-## RESET TIPS: Settings.reset_tips() (every explainer again; systems hide until met).
+## RESET TIPS: Settings.reset_tips() (every concept explained again, tips on; systems hide until met).
 func reset_tips() -> void:
 	var st: Node = get_node_or_null(^"/root/Settings")
 	if st != null and st.has_method(&"reset_tips"):
 		st.reset_tips()
-	_reset_tips_button.text = "TIPS RESET"
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide != null:
+		guide.clear_queue()
+	_reset_tips_button.text = "DONE"
+	_tips_button.set_pressed_no_signal(true)
+	_update_tips_text()
+
+
+func _on_tips_toggled(on: bool) -> void:
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide != null:
+		guide.set_tips_enabled(on)
+	else:
+		var st: Node = get_node_or_null(^"/root/Settings")
+		if st != null:
+			st.set_value(&"tips_enabled", on)
+	_update_tips_text()
+
+
+func _update_tips_text() -> void:
+	_tips_button.text = "TIPS: %s" % ("ON" if _tips_button.button_pressed else "OFF")
+
+
+func get_tips_button() -> Button:
+	return _tips_button
 
 
 func get_reset_tips_button() -> Button:

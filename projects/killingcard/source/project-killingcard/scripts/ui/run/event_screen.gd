@@ -295,3 +295,10 @@ func _leave() -> void:
 func _apply_compact() -> void:
 	if _confirm != null:
 		_confirm.custom_minimum_size.y = button_height()
+
+
+## kc-ui-pass: events are explained once (anchored to the choices).
+func _notice_concepts() -> void:
+	var g: Node = concept_guide()
+	if g != null and _row != null:
+		g.notice(&"event", _row, [_confirm])

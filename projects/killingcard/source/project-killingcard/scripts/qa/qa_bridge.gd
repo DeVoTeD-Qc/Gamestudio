@@ -168,6 +168,12 @@ func snapshot(scene: Node = null) -> Dictionary:
 	out["has_save"] = rs != null and rs.has_method(&"has_save") and rs.has_save()
 	if scene == null:
 		return out
+	# kc-ui-pass: the concept callout on screen (id, bubble, GOT IT and TIPS OFF rects in CSS px).
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide != null and guide.call(&"is_showing"):
+		var ci: Dictionary = guide.call(&"qa_info")
+		out["concept"] = {"id": ci["id"], "got_it": _css(ci["got_it"]), "tips_off": _css(ci["tips_off"]),
+				"queued": (guide.call(&"queued_ids") as Array).map(func(x: StringName) -> String: return String(x))}
 	for n: Node in scene.find_children("*", "Control", true, false):
 		var c: Control = n
 		if not c.is_visible_in_tree() or not (c is BaseButton or c.is_in_group(&"tap_target")):

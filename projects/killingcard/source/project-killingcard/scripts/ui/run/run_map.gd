@@ -205,7 +205,10 @@ func _build_v2(r: RunProgress) -> void:
 	add_child(_deck_view)
 	deck_b.pressed.connect(func() -> void:
 		if run() != null:
-			_deck_view.open(run()))
+			_deck_view.open(run())
+			var g: Node = get_node_or_null(^"/root/ConceptGuide")
+			if g != null:
+				g.notice(&"deck", _deck_view))
 	footer.add_child(deck_b)
 	_deck_button = deck_b
 	_quit_button = make_button("SAVE & QUIT", &"HudButton", 170)
@@ -226,6 +229,15 @@ func _refresh_v2() -> void:
 	_v2.selected_id = keep
 	_v2.setup(_map_v2, portrait, compact)
 	_v2.get_go_button().grab_focus.call_deferred()
+	# kc-ui-pass: tickets and REQ are explained once (REQ when you first have some), then the deck.
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide") if is_inside_tree() else null
+	if guide != null:
+		var go: Array = [_v2.get_go_button()]
+		guide.notice(&"tickets", _tickets_row, go)
+		if _req_chip != null and int(_map_v2.get("req", 0)) > 0:
+			guide.notice(&"requisition", _req_chip, go)
+		guide.add_hold_check(self, func() -> bool:
+			return _inspector != null and _inspector.visible)
 
 
 func _apply_portrait() -> void:
