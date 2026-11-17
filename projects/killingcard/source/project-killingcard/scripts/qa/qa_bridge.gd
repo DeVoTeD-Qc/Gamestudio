@@ -36,6 +36,21 @@ static func url_seed() -> int:
 	return -1
 
 
+## kc-ui-pass: ?qa=1 smoke tests click straight through the screens, so the "explain once" callouts
+## stay off under ?qa=1 unless the URL asks for them (&tips=1, the screen tours).
+func _ready() -> void:
+	_tips_for_qa.call_deferred()
+
+
+func _tips_for_qa() -> void:
+	if not OS.has_feature("web"):
+		return  # tests instance the bridge too; only a real ?qa=1 page turns tips off
+	var q: String = String(JavaScriptBridge.eval("window.location.search || ''", true))
+	var guide: Node = get_node_or_null(^"/root/ConceptGuide")
+	if guide != null and not q.contains("tips=1"):
+		guide.set(&"tips_override", false)
+
+
 func _process(delta: float) -> void:
 	_t += delta
 	if _t < PERIOD:

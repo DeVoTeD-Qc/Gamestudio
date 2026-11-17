@@ -29,9 +29,10 @@ var _saved_root_size: Vector2i = Vector2i.ZERO
 func _save_profile() -> void:
 	var st: Node = tree.root.get_node("Settings")
 	_saved = {"met": st.met_flags.duplicate(), "seen": st.seen_flags.duplicate(), "gate": RevealGate.active,
-			"auto": NewCard.auto_show}
+			"auto": NewCard.auto_show, "tips": st.tips_enabled}
 	st.met_flags = {}
 	st.seen_flags = {}
+	st.tips_enabled = true  # kc-ui-pass: another test may have switched TIPS off
 
 
 func _restore_profile() -> void:
@@ -40,6 +41,7 @@ func _restore_profile() -> void:
 	st.seen_flags = _saved["seen"]
 	RevealGate.active = _saved["gate"]
 	NewCard.auto_show = _saved["auto"]
+	st.tips_enabled = _saved["tips"]
 
 
 func _card(id: StringName) -> CardData:
